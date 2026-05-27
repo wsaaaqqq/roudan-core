@@ -1,0 +1,32 @@
+{
+   "id": "工程ID",
+   "name": "工程名称",
+   "type": "工程类型",
+   "deptId": "所属单位ID",
+   "deptName": "所属单位名称",
+   "constructionDeptName": "施工单位名称",
+   "projectManagerDeptName": "项目管理单位名称",
+   "projectCode": "项目编码",
+   "projectPersonNameInCharge": "项目负责人名称",
+   "projectPersonPhoneInCharge": "项目负责人联系电话",
+   "projectOverview": "工程概况",
+   "estimatedConstructionTime": "预计施工时间",
+   "projectReleaseTime": "项目下达时间",
+   "actualConstructionTime": "实际施工时间",
+   "supervisorContactPersonName": "监理联系人名称",
+   "supervisorsContactPersonPhone": "监理联系人联系电话",
+   "supervisorsContactDeptName": "监理单位名称",
+   "deliveryDate": "2022-01-01",
+   "deliveryDateDrawings": "2022-01-01",
+   "statues": "实施中/已归档",
+   "createUserName": "张三",
+   "createUser": "zhangSan",
+   "updateUserName": "张三",
+   "updateUser": "zhangSan",
+   "createTime": "2022-01-01 13:13:13",
+   "updateTime": "2022-01-01 13:13:13",
+   "process": "工程类型-2/2-y,基本信息-6/6-y,同步实施项目-1/2-n,可研资料-1/2-n,",
+   "detail": {
+
+   }
+}

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 日志存放路径 -->
+    <property name="log.path" value="./logs"/>
+    <!-- 日志输出格式 -->
+    <property name="log.pattern"
+              value="%d{MMdd HH:mm:ss.SSS} %X{TRACE_ID} %-15.15thread{15} %highlight(%-5level) %-70.70(%logger %method) %-5line{5} %msg%n"/>
+    <property name="log.pattern2"
+              value="%d{MMdd HH:mm:ss.SSS} %X{TRACE_ID} %-15.15thread{15} %-5level %-70.70(%logger %method) %-5line{5} %msg%n"/>
+
+    <!-- console -->
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>${log.pattern}</pattern>
+        </encoder>
+    </appender>
+
+<!--    error-->
+    <appender name="error" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}/error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}/error.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>100MB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.pattern2}</pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>error</level>
+        </filter>
+    </appender>
+
+<!--    info-->
+    <appender name="info" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}/info.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}/info.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>100MB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.pattern2}</pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>info</level>
+        </filter>
+    </appender>
+
+<!--    debug-->
+    <appender name="debug" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}/debug.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}/debug.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>1</maxHistory>
+            <totalSizeCap>100MB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.pattern2}</pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>debug</level>
+        </filter>
+    </appender>
+
+<!--    课题1-->
+    <appender name="sub1" class="ch.qos.logback.core.FileAppender">
+        <file>logs/sub1.log</file>
+        <encoder>
+            <pattern>${log.pattern2}</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.spnice.sgsms.pj.sync.sub.sub1" level="debug" additivity="true">
+        <appender-ref ref="sub1"/>
+    </logger>
+<!--    课题2-->
+    <appender name="sub2" class="ch.qos.logback.core.FileAppender">
+        <file>logs/sub2.log</file>
+        <encoder>
+            <pattern>${log.pattern2}</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.spnice.sgsms.pj.sync.sub.sub2" level="debug" additivity="true">
+        <appender-ref ref="sub2"/>
+    </logger>
+<!--    保护功能研判异常-->
+    <appender name="warningDevs" class="ch.qos.logback.core.FileAppender">
+        <file>logs/warningDevs.log</file>
+        <encoder>
+            <pattern>${log.pattern2}</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.spnice.sgsms.pj.sync.warningDevs" level="debug" additivity="true">
+        <appender-ref ref="warningDevs"/>
+    </logger>
+<!--    定值核对不一致-->
+    <appender name="setting" class="ch.qos.logback.core.FileAppender">
+        <file>logs/setting.log</file>
+        <encoder>
+            <pattern>${log.pattern2}</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.spnice.sgsms.pj.sync.setting" level="debug" additivity="true">
+        <appender-ref ref="setting"/>
+    </logger>
+
+    <logger name="com.spnice.sgsms.pj.service.DataInputService" level="info" additivity="true">
+        <appender-ref ref="sub1"/>
+        <appender-ref ref="sub2"/>
+        <appender-ref ref="warningDevs"/>
+        <appender-ref ref="setting"/>
+    </logger>
+
+<!--api-->
+    <appender name="api" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.path}/api.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${log.path}/api.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>100MB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${log.pattern2}</pattern>
+        </encoder>
+    </appender>
+    <logger name="com.spnice.sgsms.config.api" level="DEBUG" additivity="true">
+        <appender-ref ref="api"/>
+    </logger>
+
+    <logger name="org.xht.xdb.sql.SqlTool" level="debug" />
+<!--    <root level="debug">-->
+    <root level="info">
+        <appender-ref ref="console"/>
+        <appender-ref ref="debug"/>
+        <appender-ref ref="info"/>
+        <appender-ref ref="error"/>
+    </root>
+
+</configuration>

@@ -1,0 +1,35 @@
+spring:
+  datasource:
+    ds1:
+      url: jdbc:dm://192.168.10.221:5236/SECDEV_DB
+      username: SECDEV_DB
+      password: 123456789
+      driver-class-name: dm.jdbc.driver.DmDriver
+      type: com.zaxxer.hikari.HikariDataSource
+      hikari:
+        maximum-pool-size: 20
+        minimum-idle: 5
+        connection-timeout: 30000
+        pool-name: primaryHikariCP
+    ds2:
+      url: jdbc:oracle:thin:@192.168.10.221:1521:uap
+      username: uap
+      password: uap
+      driver-class-name: oracle.jdbc.OracleDriver
+      type: com.zaxxer.hikari.HikariDataSource
+      hikari:
+        maximum-pool-size: 15
+        minimum-idle: 3
+        connection-timeout: 30000
+        pool-name: secondaryHikariCP
+swagger:
+  mappings:
+    xdb:
+      name: "xdb"
+      path: /
+      packages:
+        - org.xht.xdb.controller
+logging:
+  level:
+    root: info
+    org.xht: debug
