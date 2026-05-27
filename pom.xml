@@ -35,7 +35,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.26</version>
+            <version>1.18.36</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -201,14 +201,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.0</version>
+                <version>3.13.0</version>
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
                     <fork>true</fork>
-                    <verbose>true</verbose>
                     <encoding>UTF-8</encoding>
-                    <showWarnings>false</showWarnings>
                 </configuration>
             </plugin>
             <!--Release -->
@@ -280,6 +278,12 @@
                 <configuration>
                     <!-- 当电脑有多个秘钥时，需明确指定密钥ID -->
                     <keyname>${gpgKeyId}</keyname>
+                    <!-- passphrase 通过环境变量 MAVEN_GPG_PASSPHRASE 传入 -->
+                    <gpgArguments>
+                        <arg>--no-tty</arg>
+                        <arg>--pinentry-mode</arg>
+                        <arg>loopback</arg>
+                    </gpgArguments>
                 </configuration>
             </plugin>
             <!-- ！！！重点插件二，新的发布插件 -->

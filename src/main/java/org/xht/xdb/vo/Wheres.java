@@ -86,9 +86,9 @@ public class Wheres {
             if (subPart == null || subPart.isEmpty()) {
                 list.add(w.getSqlPart());
             } else if (subPart.size() == 1) {
-                list.add(getWhereSqlPart(subPart, and));
+                list.add(getWhereSqlPart(subPart, w.and));
             } else {
-                list.add(String.format(" ( %s ) \n ", getWhereSqlPart(subPart, and)));
+                list.add(String.format(" ( %s ) \n ", getWhereSqlPart(subPart, w.and)));
             }
         }
         return String.join(delimiter, list);
@@ -153,15 +153,14 @@ public class Wheres {
 
     public Wheres anyColContain(Object value, boolean condition, String... colNames) {
         if (condition && colNames.length > 0) {
-            parts.add(new Wheres(" ("));
-            List<String> orList = new ArrayList<>();
+            Wheres sub = new Wheres();
+            sub.or();
             for (String colName : colNames) {
                 String key = key(colName);
-                orList.add(colName + " like '%' || :" + key + " || '%' ");
-                args.add(key, value);
+                sub.parts.add(new Wheres(colName + " like '%' || :" + key + " || '%' "));
+                sub.args.add(key, value);
             }
-            parts.add(new Wheres(String.join(" or ", orList)));
-            parts.add(new Wheres(")\n "));
+            parts.add(sub);
         }
         return this;
     }
