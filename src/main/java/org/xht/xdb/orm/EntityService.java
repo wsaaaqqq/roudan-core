@@ -111,11 +111,17 @@ public interface EntityService<T> {
     @NonNull
     <ID> Set<ID> ids(Class<ID> idType, Set<ID> set);
 
+    @NonNull <R> List<R> asList(String whereSql, Class<R> rClass);
+
     @NonNull
     List<T> listAll();
 
+    @NonNull <R> List<R> asList(Wheres wheres, Class<R> rClass);
+
     @NonNull
     List<T> list(WheresBean<T> wheres);
+
+    @NonNull <R> List<R> asListAll(Class<R> rClass);
 
     @NonNull
     List<T> list(Wheres wheres);
@@ -126,6 +132,8 @@ public interface EntityService<T> {
 
     @NonNull
     List<T> list(String whereSql);
+
+    @NonNull <R> List<R> asList(WheresBean<T> wheres, Class<R> rClass);
 
     @NonNull List<T> list(Consumer<WheresBean<T>> consumer);
 
@@ -140,6 +148,8 @@ public interface EntityService<T> {
 
     @NonNull
     PageResult<T> page(String whereSql, Number pageIndex, Number pageSize);
+
+    @NonNull <R> List<R> asList(String whereSql, MapUtil<?> args, Class<R> rClass);
 
     @NonNull
     PageResult<T> page(String whereSql, MapUtil<?> args, Number pageIndex, Number pageSize);

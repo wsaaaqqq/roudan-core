@@ -408,7 +408,7 @@ public class EntityServiceTest {
     }
 
     @Test
-    public void listAll() {
+    public void asListAll() {
     }
 
     @Test

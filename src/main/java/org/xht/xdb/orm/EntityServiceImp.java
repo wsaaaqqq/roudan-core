@@ -109,7 +109,7 @@ public class EntityServiceImp<T> implements EntityService<T> {
 
     @Override
     public SaveOrUpdateBatchResult<T> saveOrUpdateThenReturn(Collection<T> list, Collection<?> idsInDb,
-            Integer batchSize, boolean ignoreNulls, boolean computeReturn
+                                                             Integer batchSize, boolean ignoreNulls, boolean computeReturn
     ) {
         SaveOrUpdateBatchResult<T> ret = new SaveOrUpdateBatchResult<>();
         if (list == null || list.isEmpty())
@@ -121,8 +121,8 @@ public class EntityServiceImp<T> implements EntityService<T> {
         datasource(this.datasource);
         if (idsInDb == null) {
             idsInDb = new HashSet<>(Xdb.sql("select " + idColName + " from " + tableName)
-                                       .executeQuery()
-                                       .resultFirstColumn(idColJavaType));
+                    .executeQuery()
+                    .resultFirstColumn(idColJavaType));
         }
         if (idsInDb.isEmpty()) {
             save(list, batchSize);
@@ -152,13 +152,13 @@ public class EntityServiceImp<T> implements EntityService<T> {
         if (!updateList.isEmpty()) {
             ret.setUpdateList(_updateList);
             Xdb.table(tableName)
-               .update()
-               .id(idColName)
-               .rows(updateList)
-               .ignoreNulls(ignoreNulls)
-               .batchSize(batchSize)
-               .setRowsFromBeans(true)
-               .execute();
+                    .update()
+                    .id(idColName)
+                    .rows(updateList)
+                    .ignoreNulls(ignoreNulls)
+                    .batchSize(batchSize)
+                    .setRowsFromBeans(true)
+                    .execute();
         }
         if (!saveList.isEmpty()) {
             ret.setSaveList(_saveList);
@@ -169,7 +169,7 @@ public class EntityServiceImp<T> implements EntityService<T> {
 
     @Override
     public SaveOrUpdateBatchResult<T> saveOrUpdateThenReturn(Collection<T> list, Integer batchSize,
-            boolean ignoreNulls
+                                                             boolean ignoreNulls
     ) {
         return saveOrUpdateThenReturn(list, null, batchSize, ignoreNulls, true);
     }
@@ -218,17 +218,15 @@ public class EntityServiceImp<T> implements EntityService<T> {
         String idColName = OrmAnnoUtil.getIdColName(t);
         datasource(this.datasource);
         List<Row> updateList = new ArrayList<>();
-        ListUtil.batchCollection(list, batchSize).forEach(_list -> {
-            updateList.addAll(BeanUtil.toRows(_list));
-        });
+        ListUtil.batchCollection(list, batchSize).forEach(_list -> updateList.addAll(BeanUtil.toRows(_list)));
 
         Xdb.table(tableName)
-           .update()
-           .id(idColName)
-           .rows(updateList)
-           .ignoreNulls(ignoreNulls)
-           .batchSize(batchSize)
-           .execute();
+                .update()
+                .id(idColName)
+                .rows(updateList)
+                .ignoreNulls(ignoreNulls)
+                .batchSize(batchSize)
+                .execute();
     }
 
     @Override
@@ -452,61 +450,85 @@ public class EntityServiceImp<T> implements EntityService<T> {
 
     @Override
     public @NonNull List<T> list(String whereSql) {
+        return asList(whereSql, getBeanClass());
+    }
+
+    @Override
+    public @NonNull <R> List<R> asList(String whereSql, Class<R> rClass) {
         String tableName = OrmAnnoUtil.getTableNameByBeanClass(getBeanClass());
         datasource(this.datasource);
         return Xdb.sql("select *  from " + tableName + " " + Optional.ofNullable(whereSql).orElse(""))
-                  .executeQuery()
-                  .resultBean(getBeanClass());
+                .executeQuery()
+                .resultBean(rClass);
     }
 
     private @NonNull List<T> list(String whereSql, List<String> columns) {
+        return asList(whereSql, columns, getBeanClass());
+    }
+
+    private @NonNull <R> List<R> asList(String whereSql, List<String> columns, Class<R> rClass) {
         String tableName = OrmAnnoUtil.getTableNameByBeanClass(getBeanClass());
         datasource(this.datasource);
         if (columns == null || columns.isEmpty()) {
             return Xdb.sql("select *  from " + tableName + " " + Optional.ofNullable(whereSql).orElse(""))
-                      .executeQuery()
-                      .resultBean(getBeanClass());
+                    .executeQuery()
+                    .resultBean(rClass);
         } else {
             String _columns = String.join(" , ", columns);
             return Xdb.sql("select  " +
-                                   _columns +
-                                   "  from " +
-                                   tableName +
-                                   " " +
-                                   Optional.ofNullable(whereSql).orElse("")).executeQuery().resultBean(getBeanClass());
+                    _columns +
+                    "  from " +
+                    tableName +
+                    " " +
+                    Optional.ofNullable(whereSql).orElse("")).executeQuery().resultBean(rClass);
         }
     }
 
     @Override
     public @NonNull List<T> listAll() {
+        return asListAll(getBeanClass());
+    }
+
+    @Override
+    public @NonNull <R> List<R> asListAll(Class<R> rClass) {
         String tableName = OrmAnnoUtil.getTableNameByBeanClass(getBeanClass());
         datasource(this.datasource);
-        return Xdb.sql("select *  from " + tableName).executeQuery().resultBean(getBeanClass());
+        return Xdb.sql("select *  from " + tableName).executeQuery().resultBean(rClass);
     }
 
     @Override
     public @NonNull List<T> list(Wheres wheres) {
+        return asList(wheres, getBeanClass());
+    }
+
+    @Override
+    public @NonNull <R> List<R> asList(Wheres wheres, Class<R> rClass) {
         MapUtil<?> args = wheres.getArgs();
         if (args == null)
-            return list(wheres.getWhereSql());
-        return list(wheres.getWhereSql(), args);
+            return asList(wheres.getWhereSql(), rClass);
+        return asList(wheres.getWhereSql(), args, rClass);
     }
 
     @Override
     public @NonNull List<T> list(WheresBean<T> wheres) {
+        return asList(wheres, getBeanClass());
+    }
+
+    @Override
+    public @NonNull <R> List<R> asList(WheresBean<T> wheres, Class<R> rClass) {
         MapUtil<?> args = wheres.getArgs();
         List<SerializableFunction<T, ?>> selectList = wheres.getSelectList();
         if (selectList == null || selectList.isEmpty()) {
             if (args == null)
-                return list(wheres.getWhereSql());
-            return list(wheres.getWhereSql(), args);
+                return asList(wheres.getWhereSql(), rClass);
+            return asList(wheres.getWhereSql(), args, rClass);
         } else {
             List<String> columns = selectList.stream()
-                                             .map(getter -> OrmAnnoUtil.getColNameByGetter(getBeanClass(), getter))
-                                             .collect(Collectors.toList());
+                    .map(getter -> OrmAnnoUtil.getColNameByGetter(getBeanClass(), getter))
+                    .collect(Collectors.toList());
             if (args == null)
-                return list(wheres.getWhereSql(), columns);
-            return list(wheres.getWhereSql(), args, columns);
+                return asList(wheres.getWhereSql(), columns, rClass);
+            return asList(wheres.getWhereSql(), args, columns, rClass);
         }
     }
 
@@ -519,28 +541,33 @@ public class EntityServiceImp<T> implements EntityService<T> {
 
     @Override
     public @NonNull List<T> list(String whereSql, MapUtil<?> args) {
+        return asList(whereSql, args, getBeanClass());
+    }
+
+    @Override
+    public @NonNull <R> List<R> asList(String whereSql, MapUtil<?> args, Class<R> rClass) {
         String tableName = OrmAnnoUtil.getTableNameByBeanClass(getBeanClass());
         datasource(this.datasource);
         return Xdb.sql("select *  from " + tableName + " " + Optional.ofNullable(whereSql).orElse(""))
-                  .sqlArgs(args)
-                  .executeQuery()
-                  .resultBean(getBeanClass());
+                .sqlArgs(args)
+                .executeQuery()
+                .resultBean(rClass);
     }
 
-    private @NonNull List<T> list(String whereSql, MapUtil<?> args, List<String> columns) {
+    private @NonNull <R> List<R> asList(String whereSql, MapUtil<?> args, List<String> columns, Class<R> rClass) {
         String tableName = OrmAnnoUtil.getTableNameByBeanClass(getBeanClass());
         datasource(this.datasource);
         if (columns == null || columns.isEmpty()) {
             return Xdb.sql("select *  from " + tableName + " " + Optional.ofNullable(whereSql).orElse(""))
-                      .sqlArgs(args)
-                      .executeQuery()
-                      .resultBean(getBeanClass());
+                    .sqlArgs(args)
+                    .executeQuery()
+                    .resultBean(rClass);
         } else {
             String _columns = String.join(" , ", columns);
             return Xdb.sql("select " + _columns + " from " + tableName + " " + Optional.ofNullable(whereSql).orElse(""))
-                      .sqlArgs(args)
-                      .executeQuery()
-                      .resultBean(getBeanClass());
+                    .sqlArgs(args)
+                    .executeQuery()
+                    .resultBean(rClass);
         }
     }
 
@@ -549,12 +576,12 @@ public class EntityServiceImp<T> implements EntityService<T> {
         String tableName = OrmAnnoUtil.getTableNameByBeanClass(getBeanClass());
         datasource(this.datasource);
         return Xdb.sqlPage()
-                  .sqlSelect("select * ")
-                  .sqlMain(" from " + tableName + " " + Optional.ofNullable(whereSql).orElse(""))
-                  .sqlArgs(args)
-                  .pageIndex(pageIndex)
-                  .pagePerSize(pageSize)
-                  .resultBean(getBeanClass());
+                .sqlSelect("select * ")
+                .sqlMain(" from " + tableName + " " + Optional.ofNullable(whereSql).orElse(""))
+                .sqlArgs(args)
+                .pageIndex(pageIndex)
+                .pagePerSize(pageSize)
+                .resultBean(getBeanClass());
     }
 
     /**
@@ -570,11 +597,11 @@ public class EntityServiceImp<T> implements EntityService<T> {
         String tableName = OrmAnnoUtil.getTableNameByBeanClass(getBeanClass());
         datasource(this.datasource);
         return Xdb.sqlPage()
-                  .sqlSelect("select * ")
-                  .sqlMain(" from " + tableName + " " + Optional.ofNullable(whereSql).orElse(""))
-                  .pageIndex(pageIndex)
-                  .pagePerSize(pageSize)
-                  .resultBean(getBeanClass());
+                .sqlSelect("select * ")
+                .sqlMain(" from " + tableName + " " + Optional.ofNullable(whereSql).orElse(""))
+                .pageIndex(pageIndex)
+                .pagePerSize(pageSize)
+                .resultBean(getBeanClass());
     }
 
     @Override
