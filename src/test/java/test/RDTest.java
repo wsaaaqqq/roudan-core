@@ -40,9 +40,7 @@ public class RDTest {
         return dataSource;
     }
 
-    @Test
-    @Order(1)
-    public void createTable() {
+    public static void createTable() {
         RD.dataSourceConfig(c -> c.addDataSource(getDataSource()));
         RDConfig.setShowSql(false);
         try {
@@ -50,15 +48,15 @@ public class RDTest {
         } catch (Exception ignored) {
         }
         RD.modify()
-          .sql("CREATE TABLE T_TEST (\n" +
-                       "    ID VARCHAR(32) NOT NULL,\n" +
-                       "    NAME VARCHAR(255) DEFAULT NULL,\n" +
-                       "    CODE VARCHAR(255) DEFAULT NULL,\n" +
-                       "    TYPE VARCHAR(255) DEFAULT NULL,\n" +
-                       "    IDX INT DEFAULT NULL ,\n" +
-                       "    PRIMARY KEY (ID)\n" +
-                       ") ")
-          .execute();
+                .sql("CREATE TABLE T_TEST (\n" +
+                        "    ID VARCHAR(32) NOT NULL,\n" +
+                        "    NAME VARCHAR(255) DEFAULT NULL,\n" +
+                        "    CODE VARCHAR(255) DEFAULT NULL,\n" +
+                        "    TYPE VARCHAR(255) DEFAULT NULL,\n" +
+                        "    IDX INT DEFAULT NULL ,\n" +
+                        "    PRIMARY KEY (ID)\n" +
+                        ") ")
+                .execute();
         RDConfig.setShowSql(true);
     }
 
@@ -66,10 +64,10 @@ public class RDTest {
     @Order(2)
     public void saveData() {
         Function<Integer, PoJPA> initPo = (i) -> new PoJPA().setId("id" + i)
-                                                            .setName("name" + i)
-                                                            .setCode("code" + i)
-                                                            .setType("type" + i)
-                                                            .setIdx(i);
+                .setName("name" + i)
+                .setCode("code" + i)
+                .setType("type" + i)
+                .setIdx(i);
         List<PoJPA> pos = IntStream.range(0, DATA_SIZE).mapToObj(initPo::apply).collect(Collectors.toList());
 
         dao.save(pos, BATCH_SIZE);
@@ -110,16 +108,16 @@ public class RDTest {
     public void list() {
         assertEquals(DATA_SIZE, dao.listAll().size());
         List<PoJPA> list = dao.list(dao.wheres()
-                                       .ge(PoJPA::getIdx, 10)
-                                       .le(PoJPA::getIdx, 3000)
-                                       .endWith(PoJPA::getId, "0")
-                                       .contain(PoJPA::getName, "me"));
+                .ge(PoJPA::getIdx, 10)
+                .le(PoJPA::getIdx, 3000)
+                .endWith(PoJPA::getId, "0")
+                .contain(PoJPA::getName, "me"));
         assertFalse(list.isEmpty());
         assertFalse(list.stream()
-                        .noneMatch(i -> i.getId().endsWith("0") &&
-                                i.getName().contains("me") &&
-                                i.getIdx() >= 10 &&
-                                i.getIdx() <= 3000));
+                .noneMatch(i -> i.getId().endsWith("0") &&
+                        i.getName().contains("me") &&
+                        i.getIdx() >= 10 &&
+                        i.getIdx() <= 3000));
 
     }
 

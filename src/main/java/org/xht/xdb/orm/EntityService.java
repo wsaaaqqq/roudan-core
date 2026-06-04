@@ -25,6 +25,10 @@ public interface EntityService<T> {
         return new EntityServiceImp<>(beanClass, datasource);
     }
 
+    long count(Wheres wheres);
+
+    long count(WheresBean<T> wheres);
+
     EntityService<T> datasource(String datasource);
 
     void saveOrUpdate(T t);
@@ -67,6 +71,10 @@ public interface EntityService<T> {
 
     boolean exist(T t);
 
+    boolean exist(Wheres wheres);
+
+    boolean exist(WheresBean<T> wheres);
+
     <ID> boolean notExistId(ID id);
 
     boolean notExist(T t);
@@ -105,8 +113,16 @@ public interface EntityService<T> {
     @NonNull
     <ID> List<ID> ids(Class<ID> idType);
 
+    @NonNull <ID> List<ID> ids(Class<ID> idType, Wheres wheres);
+
+    @NonNull <ID> List<ID> ids(Class<ID> idType, WheresBean<T> wheres);
+
     @NonNull
     <ID> List<ID> ids(Class<ID> idType, List<ID> list);
+
+    @NonNull <ID> List<ID> ids(Class<ID> idType, List<ID> list, Wheres wheres);
+
+    @NonNull <ID> List<ID> ids(Class<ID> idType, List<ID> list, WheresBean<T> wheres);
 
     @NonNull
     <ID> Set<ID> ids(Class<ID> idType, Set<ID> set);
@@ -125,6 +141,10 @@ public interface EntityService<T> {
 
     @NonNull
     List<T> list(Wheres wheres);
+
+    @NonNull <ID> Set<ID> ids(Class<ID> idType, Set<ID> set, Wheres wheres);
+
+    @NonNull <ID> Set<ID> ids(Class<ID> idType, Set<ID> set, WheresBean<T> wheres);
 
     SqlTool sql(String sql);
 

@@ -106,35 +106,53 @@ public class EntityServiceTest {
     }
 
     @Test
+    public void exist21() {
+        dao.saveOrUpdate(new PoJPA().setId("1"), true);
+        assertTrue(dao.count(dao.wheres().eq(PoJPA::getId, "1")) > 0);
+        assertTrue(dao.count(WheresBean.init(PoJPA.class).eq(PoJPA::getId, "1")) > 0);
+        assertTrue(dao.exist(WheresBean.init(PoJPA.class).eq(PoJPA::getId, "1")));
+        assertTrue(dao.exist(dao.wheres().eq(PoJPA::getId, "1")));
+
+        assertFalse(dao.count(dao.wheres().eq(PoJPA::getId, "2")) > 1);
+        assertFalse(dao.count(WheresBean.init(PoJPA.class).eq(PoJPA::getId, "2")) > 1);
+        assertFalse(dao.exist(WheresBean.init(PoJPA.class).eq(PoJPA::getId, "2")));
+        assertFalse(dao.exist(dao.wheres().eq(PoJPA::getId, "2")));
+
+        assertTrue(dao.ids(String.class).size() > 0);
+        assertTrue(dao.ids(String.class,dao.wheres()).size() > 0);
+        assertTrue(dao.ids(String.class,dao.wheres().eq(PoJPA::getId, "1")).size() > 0);
+    }
+
+    @Test
     public void test() {
         dao.list(WheresBean.init(PoJPA.class)
-                           .select(PoJPA::getName)
-                           .select(PoJPA::getType)
-                           .and()
-                           .sub(e -> e.or()
-                                      .sub(e1 -> e1.startWith(PoJPA::getType, "TYPE_1")
-                                                   .sub(e2 -> e2.startWith(PoJPA::getType, "TYPE_2"))))
-                           .sub(e -> e.contain(PoJPA::getType, "MBZT"))).forEach(rhzd -> log.info("{}", rhzd));
+                .select(PoJPA::getName)
+                .select(PoJPA::getType)
+                .and()
+                .sub(e -> e.or()
+                        .sub(e1 -> e1.startWith(PoJPA::getType, "TYPE_1")
+                                .sub(e2 -> e2.startWith(PoJPA::getType, "TYPE_2"))))
+                .sub(e -> e.contain(PoJPA::getType, "MBZT"))).forEach(rhzd -> log.info("{}", rhzd));
     }
 
     @Test
     public void test0() {
         dao.list(WheresBean.init(PoJPA.class)
-                           .select(PoJPA::getName)
-                           .select(PoJPA::getType)
-                           .startWith(PoJPA::getType, "TYPE_")
-                           .contain(PoJPA::getType, "MBZT")).forEach(rhzd -> log.info("{}", rhzd));
+                .select(PoJPA::getName)
+                .select(PoJPA::getType)
+                .startWith(PoJPA::getType, "TYPE_")
+                .contain(PoJPA::getType, "MBZT")).forEach(rhzd -> log.info("{}", rhzd));
     }
 
     @Test
     public void test2() {
         PageResult<PoJPA> rhzdPageResult = dao.sqlPage()
-                                              .sqlSelect("select *")
-                                              .sqlMain(" from T_TEST")
-                                              .sqlOrder("order by idx")
-                                              .pageIndex(1)
-                                              .pagePerSize(23)
-                                              .resultBean(PoJPA.class);
+                .sqlSelect("select *")
+                .sqlMain(" from T_TEST")
+                .sqlOrder("order by idx")
+                .pageIndex(1)
+                .pagePerSize(23)
+                .resultBean(PoJPA.class);
         System.out.println(rhzdPageResult);
     }
 
@@ -186,8 +204,8 @@ public class EntityServiceTest {
     public void test7() {
         int max = 100000;
         List<PoJPA> poJPAS = IntStream.range(0, max)
-                                      .mapToObj(i -> new PoJPA().setId("test-" + i).setName("test-" + i).setType("test"))
-                                      .collect(Collectors.toList());
+                .mapToObj(i -> new PoJPA().setId("test-" + i).setName("test-" + i).setType("test"))
+                .collect(Collectors.toList());
         System.out.println(dao.ids(String.class).size());
         dao.saveOrUpdate(poJPAS, true);
         System.out.println(dao.ids(String.class).size());
@@ -233,7 +251,7 @@ public class EntityServiceTest {
         EntityService.of(PoJPA.class, db).deleteById("1");
         Assertions.assertNull(EntityService.of(PoJPA.class, db).getById("1"));
         EntityService.of(PoJPA.class, db)
-                     .saveOrUpdate(new PoJPA().setId("1").setName("1").setCode("1").setType("1").setIdx(1));
+                .saveOrUpdate(new PoJPA().setId("1").setName("1").setCode("1").setType("1").setIdx(1));
         Assertions.assertEquals("1", EntityService.of(PoJPA.class, db).getById("1").getId());
     }
 

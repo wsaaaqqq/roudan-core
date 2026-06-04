@@ -56,6 +56,19 @@ public class EntityServiceImp<T> implements EntityService<T> {
     }
 
     @Override
+    public long count(Wheres wheres) {
+        return count(wheres.getWhereSql(), wheres.getArgs());
+    }
+
+    @Override
+    public long count(WheresBean<T> wheres) {
+        MapUtil<?> args = wheres.getArgs();
+        if (args == null)
+            return count(wheres.getWhereSql());
+        return count(wheres.getWhereSql(), args);
+    }
+
+    @Override
     public EntityService<T> datasource(String datasource) {
         if (datasource != null && !datasource.isEmpty()) {
             Xdb.selectDataSourceByName(datasource);
@@ -304,6 +317,16 @@ public class EntityServiceImp<T> implements EntityService<T> {
     }
 
     @Override
+    public boolean exist(Wheres wheres) {
+        return count(wheres) > 0;
+    }
+
+    @Override
+    public boolean exist(WheresBean<T> wheres) {
+        return count(wheres) > 0;
+    }
+
+    @Override
     public <ID> boolean notExistId(ID id) {
         if (id == null)
             return false;
@@ -425,14 +448,70 @@ public class EntityServiceImp<T> implements EntityService<T> {
     }
 
     @Override
+    public @NonNull <ID> List<ID> ids(Class<ID> idType, Wheres wheres) {
+        String tableName = OrmAnnoUtil.getTableNameByBeanClass(getBeanClass());
+        String idColName = OrmAnnoUtil.getIdColNameByBeanClass(getBeanClass());
+        datasource(this.datasource);
+        MapUtil<?> args = wheres.getArgs();
+        if (args != null)
+            return Xdb.sql("select " + idColName + "  from " + tableName + " " + wheres.getWhereSql())
+                    .sqlArgs(args)
+                    .executeQuery()
+                    .resultFirstColumn(idType);
+        return Xdb.sql("select " + idColName + "  from " + tableName + " " + wheres.getWhereSql())
+                .executeQuery()
+                .resultFirstColumn(idType);
+    }
+
+    @Override
+    public @NonNull <ID> List<ID> ids(Class<ID> idType, WheresBean<T> wheres) {
+        String tableName = OrmAnnoUtil.getTableNameByBeanClass(getBeanClass());
+        String idColName = OrmAnnoUtil.getIdColNameByBeanClass(getBeanClass());
+        datasource(this.datasource);
+        MapUtil<?> args = wheres.getArgs();
+        if (args != null)
+            return Xdb.sql("select " + idColName + "  from " + tableName + " " + wheres.getWhereSql())
+                    .sqlArgs(args)
+                    .executeQuery()
+                    .resultFirstColumn(idType);
+        return Xdb.sql("select " + idColName + "  from " + tableName + " " + wheres.getWhereSql())
+                .executeQuery()
+                .resultFirstColumn(idType);
+    }
+
+    @Override
     public @NonNull <ID> List<ID> ids(Class<ID> idType, List<ID> list) {
         list.addAll(ids(idType));
         return list;
     }
 
     @Override
+    public @NonNull <ID> List<ID> ids(Class<ID> idType, List<ID> list, Wheres wheres) {
+        list.addAll(ids(idType, wheres));
+        return list;
+    }
+
+    @Override
+    public @NonNull <ID> List<ID> ids(Class<ID> idType, List<ID> list, WheresBean<T> wheres) {
+        list.addAll(ids(idType, wheres));
+        return list;
+    }
+
+    @Override
     public @NonNull <ID> Set<ID> ids(Class<ID> idType, Set<ID> set) {
         set.addAll(ids(idType));
+        return set;
+    }
+
+    @Override
+    public @NonNull <ID> Set<ID> ids(Class<ID> idType, Set<ID> set, Wheres wheres) {
+        set.addAll(ids(idType, wheres));
+        return set;
+    }
+
+    @Override
+    public @NonNull <ID> Set<ID> ids(Class<ID> idType, Set<ID> set, WheresBean<T> wheres) {
+        set.addAll(ids(idType, wheres));
         return set;
     }
 
