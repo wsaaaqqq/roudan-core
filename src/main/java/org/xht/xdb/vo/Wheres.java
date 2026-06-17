@@ -4,10 +4,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.xht.xdb.util.MapUtil;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
+import java.lang.reflect.Array;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -99,17 +97,17 @@ public class Wheres {
     }
 
     public Wheres between(String colName, Object start, Object end, boolean containEqual) {
-        return between(colName, start, end, containEqual, start != null, end != null);
+        return between(colName, start, end, containEqual, notEmpty(start), notEmpty(end));
     }
 
     public Wheres between(String colName, Object start, Object end, boolean containEqual,
-            Supplier<Boolean> conditionStart, Supplier<Boolean> conditionEnd
+                          Supplier<Boolean> conditionStart, Supplier<Boolean> conditionEnd
     ) {
         return between(colName, start, end, containEqual, conditionStart.get(), conditionEnd.get());
     }
 
     public Wheres between(String colName, Object start, Object end, boolean containEqual, boolean conditionStart,
-            boolean conditionEnd
+                          boolean conditionEnd
     ) {
         String ge = containEqual ? ">=" : ">";
         String le = containEqual ? "<=" : "<";
@@ -127,11 +125,11 @@ public class Wheres {
     }
 
     public Wheres contain(String colName, Object value) {
-        return contain(colName, value, value != null);
+        return contain(colName, value, notEmpty(value));
     }
 
     public Wheres anyColContain(Object value, String... colNames) {
-        return anyColContain(value, value != null, colNames);
+        return anyColContain(value, notEmpty(value), colNames);
     }
 
     public Wheres contain(String colName, Object value, Supplier<Boolean> condition) {
@@ -166,7 +164,22 @@ public class Wheres {
     }
 
     public Wheres endWith(String colName, Object value) {
-        return endWith(colName, value, value != null);
+        return endWith(colName, value, notEmpty(value));
+    }
+
+    public static boolean notEmpty(Object value) {
+        return !isEmptyValue(value);
+    }
+
+    public static boolean isEmptyValue(Object value) {
+        if (value == null) return true;
+        if (value instanceof String) return ((String) value).isEmpty();
+        if (value instanceof Collection) return ((Collection<?>) value).isEmpty();
+        if (value instanceof Map) return ((Map<?, ?>) value).isEmpty();
+        if (value instanceof StringBuilder) return ((StringBuilder) value).length() == 0;
+        if (value instanceof StringBuffer) return ((StringBuffer) value).length() == 0;
+        if (value.getClass().isArray()) return Array.getLength(value) == 0;
+        return false; // 非空值
     }
 
     public Wheres endWith(String colName, Object value, Supplier<Boolean> condition) {
@@ -183,7 +196,7 @@ public class Wheres {
     }
 
     public Wheres eq(String colName, Object value) {
-        return eq(colName, value, value != null);
+        return eq(colName, value, notEmpty(value));
     }
 
     public Wheres eq(String colName, Object value, Supplier<Boolean> condition) {
@@ -200,7 +213,7 @@ public class Wheres {
     }
 
     public Wheres ne(String colName, Object value) {
-        return ne(colName, value, value != null);
+        return ne(colName, value, notEmpty(value));
     }
 
     public Wheres ne(String colName, Object value, Supplier<Boolean> condition) {
@@ -217,7 +230,7 @@ public class Wheres {
     }
 
     public Wheres ge(String colName, Object value) {
-        return ge(colName, value, value != null);
+        return ge(colName, value, notEmpty(value));
     }
 
     public Wheres ge(String colName, Object value, Supplier<Boolean> condition) {
@@ -234,7 +247,7 @@ public class Wheres {
     }
 
     public Wheres gt(String colName, Object value) {
-        return gt(colName, value, value != null);
+        return gt(colName, value, notEmpty(value));
     }
 
     public Wheres gt(String colName, Object value, Supplier<Boolean> condition) {
@@ -252,7 +265,7 @@ public class Wheres {
 
     @SuppressWarnings("rawtypes")
     public Wheres in(String colName, Collection value) {
-        return in(colName, value, value != null);
+        return in(colName, value, notEmpty(value));
     }
 
     public Wheres inJoinString(String colName, String joinString) {
@@ -313,7 +326,7 @@ public class Wheres {
     }
 
     public Wheres le(String colName, Object value) {
-        return le(colName, value, value != null);
+        return le(colName, value, notEmpty(value));
     }
 
     public Wheres le(String colName, Object value, Supplier<Boolean> condition) {
@@ -330,7 +343,7 @@ public class Wheres {
     }
 
     public Wheres lt(String colName, Object value) {
-        return lt(colName, value, value != null);
+        return lt(colName, value, notEmpty(value));
     }
 
     public Wheres lt(String colName, Object value, Supplier<Boolean> condition) {
@@ -348,7 +361,7 @@ public class Wheres {
 
     @SuppressWarnings("rawtypes")
     public Wheres notIn(String colName, Collection value) {
-        return notIn(colName, value, value != null);
+        return notIn(colName, value, notEmpty(value));
     }
 
     @SuppressWarnings("rawtypes")
@@ -398,7 +411,7 @@ public class Wheres {
     }
 
     public Wheres startWith(String colName, Object value) {
-        return startWith(colName, value, value != null);
+        return startWith(colName, value, notEmpty(value));
     }
 
     public Wheres startWith(String colName, Object value, Supplier<Boolean> condition) {

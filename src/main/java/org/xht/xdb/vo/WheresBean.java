@@ -55,21 +55,21 @@ public class WheresBean<T> {
     }
 
     public <R> WheresBean<T> between(SerializableFunction<T, R> getter, Object start, Object end,
-            boolean includeBoundaries
+                                     boolean includeBoundaries
     ) {
         wheres.between(getColName(getter), start, end, includeBoundaries);
         return this;
     }
 
     public <R> WheresBean<T> between(SerializableFunction<T, R> getter, Object start, Object end,
-            boolean includeBoundaries, Supplier<Boolean> conditionStart, Supplier<Boolean> conditionEnd
+                                     boolean includeBoundaries, Supplier<Boolean> conditionStart, Supplier<Boolean> conditionEnd
     ) {
         wheres.between(getColName(getter), start, end, includeBoundaries, conditionStart, conditionEnd);
         return this;
     }
 
     public <R> WheresBean<T> between(SerializableFunction<T, R> getter, Object start, Object end,
-            boolean includeBoundaries, boolean conditionStart, boolean conditionEnd
+                                     boolean includeBoundaries, boolean conditionStart, boolean conditionEnd
     ) {
         wheres.between(getColName(getter), start, end, includeBoundaries, conditionStart, conditionEnd);
         return this;
@@ -82,7 +82,7 @@ public class WheresBean<T> {
 
     @SafeVarargs
     public final <R> WheresBean<T> anyColContain(Object value, SerializableFunction<T, R>... getters) {
-        anyColContain(value, value != null, getters);
+        anyColContain(value, Wheres.notEmpty(value), getters);
         return this;
     }
 
@@ -93,7 +93,7 @@ public class WheresBean<T> {
 
     @SafeVarargs
     public final <R> WheresBean<T> anyColContain(Object value, Supplier<Boolean> condition,
-            SerializableFunction<T, R>... getters
+                                                 SerializableFunction<T, R>... getters
     ) {
         anyColContain(value, condition.get(), getters);
         return this;
@@ -107,7 +107,7 @@ public class WheresBean<T> {
     @SuppressWarnings("UnusedReturnValue")
     @SafeVarargs
     public final <R> WheresBean<T> anyColContain(Object value, boolean condition,
-            SerializableFunction<T, R>... getters
+                                                 SerializableFunction<T, R>... getters
     ) {
         String[] array = Arrays.stream(getters).map(this::getColName).toArray(String[]::new);
         wheres.anyColContain(value, condition, array);
