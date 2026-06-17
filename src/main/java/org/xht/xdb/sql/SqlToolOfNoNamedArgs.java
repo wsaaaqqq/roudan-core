@@ -182,7 +182,7 @@ public class SqlToolOfNoNamedArgs implements Serializable {
      */
     public SqlToolOfNoNamedArgs debug() {
         format();
-        debug(Level.INFO);
+        debug(XdbConfig.getLogLevel());
         return this;
     }
 

@@ -38,7 +38,6 @@ public class SqlTool implements Serializable {
     private Long limitFrom;
     private Long limitTo;
     private boolean notFormated = true;
-    private Level level = Level.INFO;
 
     public Map<String, Object> getSqlArgs() {
         return sqlArgs.value();
@@ -197,7 +196,7 @@ public class SqlTool implements Serializable {
      */
     public SqlTool debug() {
         format();
-        debug(Level.INFO);
+        debug(XdbConfig.getLogLevel());
         return this;
     }
 
