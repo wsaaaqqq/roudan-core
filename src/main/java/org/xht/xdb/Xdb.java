@@ -248,9 +248,9 @@ public class Xdb {
             if (connection == null || connection.isClosed() || !connection.isValid(1)) {
                 //by datasource
                 connection = dataSource.getConnection();
-                log.debug("get connection by datasource");
+                log.trace("get connection by datasource");
             } else {
-                log.debug("get connection by spring");
+                log.trace("get connection by spring");
             }
         }
         return connection;

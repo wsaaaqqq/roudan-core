@@ -19,11 +19,11 @@ public class XdbConfig {
     private boolean autoClose = true;
     private boolean useSpringTransaction = false;
     private final ThreadLocal<Level> logLevel = new ThreadLocal<Level>() {{
-        set(Level.INFO);
+        set(Level.DEBUG);
     }};
     private boolean showSql = true;
     private boolean showSqlArgs = true;
-    private boolean showSqlUseSystemOut = true;
+    private boolean showSqlUseSystemOut = false;
     private boolean showSqlFlagOfArgsInComment = false;
     private boolean showSqlCaller = true;
     private final Set<String> ignorePackagesForDebug = new HashSet<String>() {{
