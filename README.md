@@ -4,11 +4,11 @@
 [![Java](https://img.shields.io/badge/java-8%2B-orange)](https://www.oracle.com/java/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://www.apache.org/licenses/LICENSE-2.0)
 
-**roudan** 是一款轻量级高性能 Java 数据库操作库，旨在平衡开发效率与技术灵活性。
+**roudan** 是一款高性能 Java 数据库操作库，旨在平衡开发效率与技术灵活性。
 
 它融合了 **JPA 面向实体的极简开发体验** 与 **MyBatis 原生 SQL 的强大控制力**，同时内置高效的批处理能力。
 
-> 命名灵感来自《火影忍者》秋道一族的秘术——**肉弹战车**（Nikudan Sensha），意为像战车一样冲击力十足、势不可挡地碾过数据库操作的一切障碍。
+> 命名有三重含义：其一来自《火影忍者》秋道一族的秘术——**肉弹战车**；其二是作者女儿的小名**「肉肉」**；其三是"肉蛋"听着就敦实可靠。和操作数据库一样——干脆、直接。
 
 ---
 
@@ -116,7 +116,7 @@ PageResult<User> page = dao.page(
 
 // 原生 SQL
 List<User> users = Xdb.sql("select * from T_USER where name like :name")
-    .sqlArgs("name", "%张%")
+    .sqlArg("name", "%张%")
     .executeQuery()
     .resultBean(User.class);
 ```
@@ -206,13 +206,13 @@ List<User> users = userDao.find_by_name_like("张%");
 ```java
 // 基础查询
 List<User> users = Xdb.sql("select * from T_USER where type = :type")
-    .sqlArgs("type", "ADMIN")
+    .sqlArg("type", "ADMIN")
     .executeQuery()
     .resultBean(User.class);
 
 // 单行结果
 Row row = Xdb.sql("select * from T_USER where id = :id")
-    .sqlArgs("id", "1")
+    .sqlArg("id", "1")
     .executeQuery()
     .resultRow();
 
@@ -232,7 +232,7 @@ Xdb.table("T_USER")
 
 Xdb.table("T_USER")
     .delete()
-    .id("1")
+    .row(Row.init().set("id", "1"))
     .execute();
 
 Row info = Xdb.table("T_USER")
@@ -341,7 +341,7 @@ PageResult<User> page2 = Xdb.sqlPage()
     .sqlSelect("select u.*")
     .sqlMain("from T_USER u where u.type = :type")
     .sqlOrder("order by u.create_time desc")
-    .sqlArgs("type", "NORMAL")
+    .sqlArg("type", "NORMAL")
     .pageIndex(1)
     .pagePerSize(20)
     .resultBean(User.class);
@@ -349,23 +349,35 @@ PageResult<User> page2 = Xdb.sqlPage()
 
 ### 多数据源
 
+数据源在 DAO 层使用，三种方式任选：
+
+**方式一：创建 DAO 时指定数据源**
+
 ```java
-// 初始化多数据源
-Xdb.init()
-    .addDataSourceDefault(mysqlDs, DbType.MYSQL)       // 默认数据源
-    .addDataSource(oracleDs, DbType.ORACLE, "oracle")   // 命名数据源
-    .addDataSource(pgDs, DbType.PostgreSQL, "pg");
-
-// 通过 Xdb 切换
-Xdb.datasource("oracle").sql("select * from ...").executeQuery();
-
-// 通过 EntityService 指定
-dao.datasource("oracle").listAll();
-
-// 实体类上声明数据源（注解方式）
-@Table(value = "T_USER", datasource = "oracle")
-public class User { ... }
+BaseDao<User> dao = RR.dao().baseDao(User.class, "oracle");
+dao.listAll(); // 自动连 oracle
 ```
+
+**方式二：运行时动态切换**
+
+```java
+BaseDao<User> dao = RR.dao().baseDao(User.class);
+dao.datasource("oracle").listAll();  // 临时切到 oracle
+```
+
+**方式三：继承 EntityServiceImp，写死数据源**
+
+```java
+@Repository
+@Slf4j
+public class UserDao extends EntityServiceImp<User> {
+    public UserDao() {
+        super(User.class, "oracle");
+    }
+}
+```
+
+ThreadLocal 隔离，多数据源并发互不干扰。
 
 ### 批量操作
 
@@ -383,8 +395,8 @@ SaveOrUpdateBatchResult<User> result = dao.saveOrUpdateThenReturn(
     500,    // batchSize
     true    // ignoreNulls
 );
-// result.getSaved()   — 新增的记录
-// result.getUpdated()  — 更新的记录
+// result.getSaveList()   — 新增的记录
+// result.getUpdateList()  — 更新的记录
 ```
 
 ### Spring 集成
@@ -407,7 +419,7 @@ public void doBusiness() {
     dao.save(new User().setId("1").setName("test"));
 
     Xdb.sql("update T_ORDER set status = :s")
-        .sqlArgs("s", "PAID")
+        .sqlArg("s", "PAID")
         .executeUpdate();
 }
 ```
@@ -435,24 +447,6 @@ Xdb.sql("select * from T_USER")
 // 日志级别
 XdbConfig.setLogLevel(Level.INFO);    // 设为 INFO，减少 DEBUG 输出
 ```
-
----
-
-## 支持的数据库
-
-| 数据库 | 支持 | 数据库 | 支持 |
-|--------|------|--------|------|
-| Oracle | ✅ | MySQL / MariaDB | ✅ |
-| PostgreSQL | ✅ | 达梦 DM | ✅ |
-| 金仓 KingBase | ✅ | 南大通用 GBase | ✅ |
-| 神通 OSCAR | ✅ | 高斯 GaussDB | ✅ |
-| OceanBase | ✅ | TiDB | ✅ |
-| SQL Server | ✅ | DB2 | ✅ |
-| H2 | ✅ | SQLite | ✅ |
-| ClickHouse | ✅ | Impala | ✅ |
-| Hive | ✅ | 虚谷 Xugu | ✅ |
-
-> 共支持 **40+** 种数据库，自动从 JDBC Driver 类名检测数据库类型。
 
 ---
 
