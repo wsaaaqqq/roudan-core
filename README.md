@@ -18,7 +18,7 @@
 - **双模开发** — JPA 式的实体 CRUD + MyBatis 式的自由 SQL，两者可混用
 - **动态 DAO 代理** — 基于方法命名约定自动生成 SQL，无需编写实现
 - **流畅查询构造器** — `Wheres` / `WheresBean<T>` 链式构建 WHERE 条件，支持类型安全 Lambda
-- **多 ORM 注解兼容** — 同时支持 JPA、MyBatis-Flex、Jimmer 及自有注解
+- **多 ORM 注解兼容** — 同时支持 JPA、MyBatis-Flex 及自有注解
 - **多数据源** — ThreadLocal 隔离的多数据源管理，运行时动态切换
 - **40+ 数据库** — Oracle、MySQL、PostgreSQL、达梦、金仓、H2 等
 - **SQL 文件管理** — SQL 集中管理，支持 DB 方言后缀，参数自动条件化
@@ -80,7 +80,7 @@ public class User implements Serializable {
 }
 ```
 
-> 也支持 Jimmer `@Entity`、MyBatis-Flex `@Table` 等注解，通过 `XdbConfig.setOrmType()` 切换。
+> 也支持 MyBatis-Flex `@Table` 等注解，通过 `XdbConfig.setOrmType()` 切换。
 
 ### 3. 初始化数据源
 
