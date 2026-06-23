@@ -1,6 +1,6 @@
 # roudan (肉蛋)
 
-[![Maven Central](https://img.shields.io/badge/maven--central-0.0.1-blue)](https://central.sonatype.com/)
+[![Maven Central](https://img.shields.io/badge/maven--central-0.0.2-blue)](https://central.sonatype.com/)
 [![Java](https://img.shields.io/badge/java-8%2B-orange)](https://www.oracle.com/java/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://www.apache.org/licenses/LICENSE-2.0)
 
@@ -37,7 +37,7 @@
 <dependency>
     <groupId>io.github.wsaaaqqq</groupId>
     <artifactId>roudan-core</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
 </dependency>
 ```
 

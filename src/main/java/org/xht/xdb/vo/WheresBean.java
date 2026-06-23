@@ -38,6 +38,16 @@ public class WheresBean<T> {
         return this;
     }
 
+    public <R> WheresBean<T> orderByAsc(SerializableFunction<T, R> getter, boolean nullsLast) {
+        wheres.orderByAsc(getColName(getter), nullsLast);
+        return this;
+    }
+
+    public <R> WheresBean<T> orderByDesc(SerializableFunction<T, R> getter, boolean nullsLast) {
+        wheres.orderByDesc(getColName(getter), nullsLast);
+        return this;
+    }
+
     public WheresBean<T> sub(Consumer<WheresBean<T>> consumer) {
         WheresBean<T> sub = new WheresBean<>(beanClass);
         consumer.accept(sub);

@@ -8,6 +8,7 @@ import java.lang.reflect.Array;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 @SuppressWarnings({"UnusedReturnValue", "unused"})
 @Data
@@ -15,6 +16,7 @@ import java.util.function.Supplier;
 public class Wheres {
 
     private List<Wheres> parts = new ArrayList<>();
+    private List<Wheres> orders = new ArrayList<>();
     private MapUtil<Object> args = new MapUtil<>();
     private Number pageIndex;
     private Number pageSize;
@@ -32,6 +34,16 @@ public class Wheres {
 
     public static Wheres init() {
         return new Wheres();
+    }
+
+    public Wheres orderByAsc(String order, boolean nullsLast) {
+        orders.add(new Wheres(order + " asc " + (nullsLast ? " nulls last " : "")));
+        return this;
+    }
+
+    public Wheres orderByDesc(String colName, boolean nullsLast) {
+        orders.add(new Wheres(colName + " desc " + (nullsLast ? " nulls last " : "")));
+        return this;
     }
 
     public Wheres and() {
@@ -61,17 +73,24 @@ public class Wheres {
     }
 
     public String getWhereSql() {
-        if (parts == null || parts.isEmpty())
-            return "";
+        if (parts == null || parts.isEmpty()) return "";
         StringBuilder whereSql = new StringBuilder(" where \n");
         String join = getWhereSqlPart(parts, and);
         whereSql.append(join);
-        return whereSql.toString();
+        String where = whereSql.toString();
+        String orders = getOrdersSql();
+        return where + orders;
+    }
+
+    private String getOrdersSql() {
+        if (orders == null || orders.isEmpty()) {
+            return "";
+        }
+        return " order by " + orders.stream().map(wheres -> wheres.sqlPart).collect(Collectors.joining(", "));
     }
 
     private String getWhereSqlPart(List<Wheres> parts, boolean and) {
-        if (parts == null || parts.isEmpty())
-            return "";
+        if (parts == null || parts.isEmpty()) return "";
         String delimiter;
         if (and) {
             delimiter = " and ";
@@ -100,15 +119,11 @@ public class Wheres {
         return between(colName, start, end, containEqual, notEmpty(start), notEmpty(end));
     }
 
-    public Wheres between(String colName, Object start, Object end, boolean containEqual,
-                          Supplier<Boolean> conditionStart, Supplier<Boolean> conditionEnd
-    ) {
+    public Wheres between(String colName, Object start, Object end, boolean containEqual, Supplier<Boolean> conditionStart, Supplier<Boolean> conditionEnd) {
         return between(colName, start, end, containEqual, conditionStart.get(), conditionEnd.get());
     }
 
-    public Wheres between(String colName, Object start, Object end, boolean containEqual, boolean conditionStart,
-                          boolean conditionEnd
-    ) {
+    public Wheres between(String colName, Object start, Object end, boolean containEqual, boolean conditionStart, boolean conditionEnd) {
         String ge = containEqual ? ">=" : ">";
         String le = containEqual ? "<=" : "<";
         if (conditionStart) {
@@ -273,10 +288,8 @@ public class Wheres {
     }
 
     public Wheres inJoinString(String colName, String joinString, String split) {
-        if (joinString == null || joinString.isEmpty())
-            return this;
-        if (split == null || split.isEmpty())
-            return this;
+        if (joinString == null || joinString.isEmpty()) return this;
+        if (split == null || split.isEmpty()) return this;
         String[] arr = joinString.split(split);
         if (arr.length > 1) {
             return in(colName, arr, true);
