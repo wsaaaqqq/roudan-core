@@ -6,6 +6,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.xht.xdb.function.SetFieldValueFunction;
 import org.xht.xdb.function.impl.*;
+import org.xht.xdb.orm.util.AnnoUtil;
 import org.xht.xdb.vo.FieldVo;
 import org.xht.xdb.vo.Row;
 
@@ -748,7 +749,7 @@ public class ResultSetUtil {
                 Annotation[] annotationsField = field.getAnnotations();
                 for (Annotation annotation : annotationsField) {
                     Class<? extends Annotation> annotationType = annotation.annotationType();
-                    if (annotationType.getName().equals("javax.persistence.Column")) {
+                    if (annotationType.getName().equals(AnnoUtil.JPA_ROOT + ".Column")) {
                         try {
                             Method method = annotationType.getDeclaredMethod("name");
                             method.setAccessible(true);

@@ -19,6 +19,6 @@ public class SetFloatField implements SetFieldValueFunction {
         if (value instanceof Number) {
             return ((Number) value).floatValue();
         }
-        return new Float(value.toString().trim());
+        return Float.valueOf(value.toString().trim());
     }
 }

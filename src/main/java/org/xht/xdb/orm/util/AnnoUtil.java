@@ -16,6 +16,18 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AnnoUtil {
 
+    public static final String JPA_ROOT;
+
+    static {
+        String root = "javax.persistence";
+        try {
+            Class.forName("jakarta.persistence.Id");
+            root = "jakarta.persistence";
+        } catch (ClassNotFoundException ignored) {
+        }
+        JPA_ROOT = root;
+    }
+
     public static <T, R> R getClassAnnoValue(T t, String annotationName, String methodName) {
         return getClassAnnoValueByBeanClass(t.getClass(), annotationName, methodName);
     }

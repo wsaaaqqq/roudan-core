@@ -11,7 +11,7 @@ public class OrmMappingServiceJpa implements OrmMappingService {
 
     @Override
     public <T> String getTableNameByBeanClass(Class<T> beanClass) {
-        String name = AnnoUtil.getClassAnnoValueByBeanClass(beanClass, "javax.persistence.Table", "name");
+        String name = AnnoUtil.getClassAnnoValueByBeanClass(beanClass, AnnoUtil.JPA_ROOT + ".Table", "name");
         if (name == null || name.isEmpty())
             return OrmMappingService.impDefault.getTableNameByBeanClass(beanClass);
         return name;
@@ -23,7 +23,7 @@ public class OrmMappingServiceJpa implements OrmMappingService {
         if (field == null) {
             return OrmMappingService.impDefault.getColNameByBeanClass(beanClass, fieldName);
         }
-        String name = AnnoUtil.getAnnoValueOfField(field, "javax.persistence.Column", "name");
+        String name = AnnoUtil.getAnnoValueOfField(field, AnnoUtil.JPA_ROOT + ".Column", "name");
         if (name == null || name.isEmpty())
             return OrmMappingService.impDefault.getColNameByBeanClass(beanClass, fieldName);
         return name;
@@ -31,7 +31,7 @@ public class OrmMappingServiceJpa implements OrmMappingService {
 
     @Override
     public <T> String getIdFieldNameByBeanClass(Class<T> beanClass) {
-        Field field = AnnoUtil.getFieldByBeanClass(beanClass, "javax.persistence.Id");
+        Field field = AnnoUtil.getFieldByBeanClass(beanClass, AnnoUtil.JPA_ROOT + ".Id");
         if (field == null) {
             return OrmMappingService.impDefault.getIdFieldNameByBeanClass(beanClass);
         }
@@ -40,7 +40,7 @@ public class OrmMappingServiceJpa implements OrmMappingService {
 
     @Override
     public <T> Field getIdFieldByBeanClass(Class<T> beanClass) {
-        Field field = AnnoUtil.getFieldByBeanClass(beanClass, "javax.persistence.Id");
+        Field field = AnnoUtil.getFieldByBeanClass(beanClass, AnnoUtil.JPA_ROOT + ".Id");
         if (field == null) {
             return OrmMappingService.impDefault.getIdFieldByBeanClass(beanClass);
         }
@@ -52,7 +52,7 @@ public class OrmMappingServiceJpa implements OrmMappingService {
         if (field == null || "serialVersionUID".equals(field.getName())) {
             return true;
         }
-        return AnnoUtil.isFieldAnnotated(field, "javax.persistence.Transient") ||
-                AnnoUtil.isFieldAnnotated(field, "javax.persistence.JoinColumn");
+        return AnnoUtil.isFieldAnnotated(field, AnnoUtil.JPA_ROOT + ".Transient") ||
+                AnnoUtil.isFieldAnnotated(field, AnnoUtil.JPA_ROOT + ".JoinColumn");
     }
 }

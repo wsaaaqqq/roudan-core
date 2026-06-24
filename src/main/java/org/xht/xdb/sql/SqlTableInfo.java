@@ -49,10 +49,10 @@ public class SqlTableInfo {
                 .sqlArg(id, value)
                 .executeQuery(autoCloseConnection)
                 .firstBean(tClass);
-        List<Field> jonColumnFields = AnnoUtil.getFieldsByBeanClass(tClass, "javax.persistence.JoinColumn");
+        List<Field> jonColumnFields = AnnoUtil.getFieldsByBeanClass(tClass, AnnoUtil.JPA_ROOT + ".JoinColumn");
         if (jonColumnFields == null || jonColumnFields.isEmpty()) return t;
         for (Field jonColumnField : jonColumnFields) {
-            AnnoUtil.getAnnoValueOfField(jonColumnField, "javax.persistence.JoinColumn", "name");
+            AnnoUtil.getAnnoValueOfField(jonColumnField, AnnoUtil.JPA_ROOT + ".JoinColumn", "name");
         }
         return t;
     }

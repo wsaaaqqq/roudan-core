@@ -19,6 +19,6 @@ public class SetDoubleField implements SetFieldValueFunction {
         if (value instanceof Number) {
             return ((Number) value).doubleValue();
         }
-        return new Double(value.toString().trim());
+        return Double.valueOf(value.toString().trim());
     }
 }

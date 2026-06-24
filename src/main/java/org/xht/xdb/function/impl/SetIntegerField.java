@@ -24,7 +24,7 @@ public class SetIntegerField implements SetFieldValueFunction {
         if (index != -1) {
             string = string.substring(0, index);
         }
-        return new Integer(string);
+        return Integer.valueOf(string);
     }
 
 }

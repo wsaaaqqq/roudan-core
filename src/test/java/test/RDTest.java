@@ -1,19 +1,14 @@
 package test;
 
 import lombok.extern.slf4j.Slf4j;
-import org.h2.jdbcx.JdbcDataSource;
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
-import org.xht.rd.RD;
-import org.xht.rd.RDConfig;
 import org.xht.rr.RR;
 import org.xht.xdb.orm.dao.BaseDao;
 import test.orm.po.PoJPA;
 
-import javax.sql.DataSource;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -28,36 +23,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class RDTest {
     private final BaseDao<PoJPA> dao = RR.dao().baseDao(PoJPA.class);
-
     private final int DATA_SIZE = 10000;
     private final int BATCH_SIZE = 1000;
 
-    public static @NonNull DataSource getDataSource() {
-        JdbcDataSource dataSource = new JdbcDataSource();
-        dataSource.setURL("jdbc:h2:mem:testDb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL");
-        dataSource.setUser("sa");
-        dataSource.setPassword("");
-        return dataSource;
-    }
-
-    public static void createTable() {
-        RD.dataSourceConfig(c -> c.addDataSource(getDataSource()));
-        RDConfig.setShowSql(false);
-        try {
-            RD.modify().sql("DROP TABLE T_TEST").execute();
-        } catch (Exception ignored) {
-        }
-        RD.modify()
-                .sql("CREATE TABLE T_TEST (\n" +
-                        "    ID VARCHAR(32) NOT NULL,\n" +
-                        "    NAME VARCHAR(255) DEFAULT NULL,\n" +
-                        "    CODE VARCHAR(255) DEFAULT NULL,\n" +
-                        "    TYPE VARCHAR(255) DEFAULT NULL,\n" +
-                        "    IDX INT DEFAULT NULL ,\n" +
-                        "    PRIMARY KEY (ID)\n" +
-                        ") ")
-                .execute();
-        RDConfig.setShowSql(true);
+    static {
+        Dbs.h2();
     }
 
     @Test

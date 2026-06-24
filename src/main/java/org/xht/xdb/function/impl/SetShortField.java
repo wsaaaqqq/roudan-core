@@ -27,7 +27,7 @@ public class SetShortField implements SetFieldValueFunction {
         if (index != -1) {
             string = string.substring(0, index);
         }
-        return new Short(string);
+        return Short.valueOf(string);
     }
 
 }

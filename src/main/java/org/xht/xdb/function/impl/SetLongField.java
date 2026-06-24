@@ -21,6 +21,6 @@ public class SetLongField implements SetFieldValueFunction {
             return null;
         if (value instanceof Long)
             return (Long) value;
-        return new Long(value.toString());
+        return Long.valueOf(value.toString());
     }
 }

@@ -1,6 +1,5 @@
 package test;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xht.rr.RR;
 import org.xht.xdb.vo.Row;
@@ -13,8 +12,7 @@ import java.util.stream.IntStream;
 
 public class RRTest {
 
-    @BeforeEach
-    public void setUp() {
+    static {
         //        RRConfig.setIgnorePackagesForDebug(ps -> ps.clear());
         Dbs.h2();
     }
@@ -24,13 +22,13 @@ public class RRTest {
     public void testInsert() {
         RR.modify().sql("delete from t_test").execute();
         RR.namedModify()
-          .sql("insert into t_test (id, name, idx) values (:id, :name, :idx)")
-          .argsBatch(rows -> IntStream.range(0, 10000).mapToObj(i -> new HashMap<String, Object>() {{
-              put("id", "id" + i);
-              put("name", "name" + i + "@example.com");
-              put("idx", i);
-          }}).forEach(rows::add))
-          .executeBatch(100);
+                .sql("insert into t_test (id, name, idx) values (:id, :name, :idx)")
+                .argsBatch(rows -> IntStream.range(0, 10000).mapToObj(i -> new HashMap<String, Object>() {{
+                    put("id", "id" + i);
+                    put("name", "name" + i + "@example.com");
+                    put("idx", i);
+                }}).forEach(rows::add))
+                .executeBatch(100);
         print();
     }
 
@@ -70,9 +68,9 @@ public class RRTest {
             put("idx", 35);
         }});
         RR.namedModify()
-          .sql("insert into t_test (id, name, idx) values (:id, :name, :idx)")
-          .argsBatch(rows)
-          .executeBatch(100);
+                .sql("insert into t_test (id, name, idx) values (:id, :name, :idx)")
+                .argsBatch(rows)
+                .executeBatch(100);
         print();
     }
 
