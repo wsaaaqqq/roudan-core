@@ -32,6 +32,7 @@ public class XdbConfig {
         add("java.");
         add("javax.");
         add("sun.reflect.");
+        add("org.springframework.");
         add("org.junit.");
         add("com.intellij.");
     }};
