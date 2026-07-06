@@ -1,0 +1,114 @@
+# Roudan SQL 文件模式
+
+> 将 SQL 集中写在 classpath 下的 `.sql` 文件中，通过 `Xdb.sqlFile()` 加载执行。
+> 支持条件参数（`--:`）、数据库方言后缀。
+
+## SQL 文件格式
+
+SQL 文件放在 classpath 下（如 `src/main/resources/files/sql/`）：
+
+```sql
+-- files/sql/device.sql --
+select d.* from T_DEVICE d
+where 1=1
+--: and d.type = :type
+--: and d.name like :name
+--: and d.status = :status
+```
+
+以 `--:` 开头的行是**条件行**——行内所有 `:paramName` 都传入时，自动解除注释；任一参数未传入时，保持注释。
+
+## 加载方式
+
+### 通过同目录 Class 定位
+
+```java
+// sqlFileClass: 与 sql 文件在同一目录层级下的任意类
+// sqlFileName:   sql 文件名（相对于 sqlFileClass 所在目录）
+List<Device> devices = Xdb.sqlFile(MyClass.class, "files/sql/device.sql")
+    .sqlArgs(MapUtil.init()
+        .add("type", "SENSOR")
+        .add("name", "%温度%"))
+    .executeQuery()
+    .resultBean(Device.class);
+```
+
+### 通过相对路径
+
+```java
+// 根目录由 XdbConfig.setSqlDir() 指定，默认 user.dir
+XdbConfig.setSqlDir("/path/to/sql");
+
+List<Device> devices = Xdb.sqlFile("device.sql")
+    .sqlArg("type", "SENSOR")
+    .executeQuery()
+    .resultBean(Device.class);
+```
+
+## 条件行详解
+
+传入参数时生效，不传时跳过：
+
+```java
+// 只传 type → status 那行不会出现在最终 SQL 中
+Xdb.sqlFile(MyClass.class, "files/sql/device.sql")
+    .sqlArg("type", "SENSOR")
+    .executeQuery();
+
+// 全部传入 → 三行条件都生效
+Xdb.sqlFile(MyClass.class, "files/sql/device.sql")
+    .sqlArgs(MapUtil.init()
+        .add("type", "SENSOR")
+        .add("name", "%温%")
+        .add("status", "ONLINE"))
+    .executeQuery();
+```
+
+## 数据库方言后缀
+
+SQL 文件按数据库方言命名，加载时自动选最匹配的：
+
+```
+files/sql/device.sql.oracle       → Oracle 时优先加载
+files/sql/device.sql.mysql        → MySQL 时优先加载
+files/sql/device.sql              → 兜底（匹配不到方言时）
+```
+
+无需在多数据源场景下手动切换——框架根据当前 `XDataSource` 的 `DbType` 自动选择。
+
+## 执行操作
+
+```java
+// 查询
+List<Device> list = Xdb.sqlFile(MyClass.class, "sql/device.sql")
+    .sqlArg("type", "A")
+    .executeQuery()
+    .resultBean(Device.class);
+
+// 增删改
+int rows = Xdb.sqlFile(MyClass.class, "sql/update_device.sql")
+    .sqlArgs(MapUtil.init().add("id", "1").add("name", "新名称"))
+    .executeUpdate();
+
+// 统计
+long count = Xdb.sqlFile(MyClass.class, "sql/count_device.sql")
+    .sqlArg("type", "A")
+    .executeCount();
+
+// 调试
+Xdb.sqlFile(MyClass.class, "sql/device.sql")
+    .debug()  // 打印最终生成的完整 SQL
+    .sqlArg("type", "A")
+    .executeQuery();
+```
+
+## 适用场景
+
+| 场景 | 是否适用 |
+|------|----------|
+| 大量 SQL 统一管理 | 适合 |
+| SQL 需要 DBA 审核/调优 | 适合 |
+| 动态条件查询（参数可选） | 适合 |
+| 多数据库方言适配 | 适合 |
+| 简单单表 CRUD | 不适合（用 DAO 模式） |
+| 少量零散 SQL | 不适合（用 SQL 模式） |

@@ -1,0 +1,64 @@
+# Roudan 数据库操作 Skill
+
+> roudan 是纯 JDBC 封装的轻量 ORM 库，零 Spring 依赖，兼容 JPA / MyBatis-Flex / 自有注解。
+>
+> Maven: `io.github.wsaaaqqq:roudan-core:0.0.2` | 基础包: `org.xht`
+
+## 三种编程模式（按场景选用，可混用）
+
+| 模式 | Skill 文件 | 适用场景 |
+|------|-----------|----------|
+| **DAO 模式** | [roudan-dao.skill](./roudan-dao.skill) | 单表 CRUD、Wheres 条件查询、动态代理、批量操作 |
+| **SQL 模式** | [roudan-sql.skill](./roudan-sql.skill) | 手写 SQL、多表关联、复杂查询、Table API |
+| **SQL 文件模式** | [roudan-sqlfile.skill](./roudan-sqlfile.skill) | SQL 集中管理、条件参数 `--:`、多数据库方言 |
+
+## 通用基础
+
+### 初始化数据源（应用启动时执行一次）
+
+```java
+HikariDataSource ds = new HikariDataSource();
+ds.setJdbcUrl("jdbc:mysql://localhost:3306/mydb");
+ds.setUsername("root");
+ds.setPassword("pwd");
+Xdb.init().addDataSourceDefault(ds);
+```
+
+多数据源：
+
+```java
+Xdb.init()
+    .addDataSourceDefault(mysqlDs)       // 默认
+    .addDataSource(oracleDs, "oracle")   // 命名
+```
+
+### 实体类（必须标注 @Id，推荐 JPA 注解）
+
+```java
+@Data @Accessors(chain = true)
+@Entity
+@Table(name = "T_USER")
+public class User implements Serializable {
+    @Id @Column(name = "ID")
+    private String id;
+    private String name;       // 列名相同时省略 @Column
+}
+```
+
+### 日志与事务全局配置
+
+```java
+XdbConfig.setShowSql(true);              // 打印 SQL
+XdbConfig.setShowSqlArgs(true);          // 打印参数
+XdbConfig.setUseSpringTransaction(true); // 参与 Spring 事务
+```
+
+### Spring Boot 集成
+
+```java
+@Configuration
+public class RoudanConfig {
+    @PostConstruct public void init() { XdbConfig.setUseSpringTransaction(true); }
+    @Bean public Xdb xdb(DataSource ds) { return Xdb.init().addDataSourceDefault(ds); }
+}
+```

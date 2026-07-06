@@ -1,6 +1,6 @@
 # roudan (肉蛋)
 
-[![Maven Central](https://img.shields.io/badge/maven--central-0.0.2-blue)](https://central.sonatype.com/)
+[![Maven Central](https://img.shields.io/badge/maven--central-0.0.4-blue)](https://central.sonatype.com/artifact/io.github.wsaaaqqq/roudan-core)
 [![Java](https://img.shields.io/badge/java-8%2B-orange)](https://www.oracle.com/java/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)](https://www.apache.org/licenses/LICENSE-2.0)
 
@@ -37,9 +37,11 @@
 <dependency>
     <groupId>io.github.wsaaaqqq</groupId>
     <artifactId>roudan-core</artifactId>
-    <version>0.0.2</version>
+    <version>0.0.4</version>
 </dependency>
 ```
+
+> Spring Boot 用户推荐直接引入 [roudan-spring-boot-starter](https://github.com/wsaaaqqq/roudan-spring-boot-starter)，自动完成数据源装配。
 
 ### 2. 定义实体类
 
@@ -64,23 +66,7 @@ public class User implements Serializable {
 }
 ```
 
-**roudan 自有注解：**
-
-```java
-@Data
-@Accessors(chain = true)
-@org.xht.xdb.orm.anno.Table("T_USER")
-public class User implements Serializable {
-    @org.xht.xdb.orm.anno.Id
-    @org.xht.xdb.orm.anno.Column("ID")
-    private String id;
-    private String name;
-    private String code;
-    private Integer idx;
-}
-```
-
-> 也支持 MyBatis-Flex `@Table` 等注解，通过 `XdbConfig.setOrmType()` 切换。
+> 也支持 roudan 自有注解及 MyBatis-Flex `@Table` 等，通过 `RDConfig.setOrmType()` 切换。
 
 ### 3. 初始化数据源
 
@@ -90,14 +76,14 @@ ds.setJdbcUrl("jdbc:h2:mem:test");
 ds.setUsername("sa");
 ds.setPassword("");
 
-Xdb.init().addDataSourceDefault(ds);
+RD.dataSourceConfig(cfg -> cfg.addDataSourceDefault(ds));
 ```
 
 ### 4. 开始使用
 
 ```java
 // 获取 BaseDao
-BaseDao<User> dao = RR.dao().baseDao(User.class);
+BaseDao<User> dao = RD.dao().baseDao(User.class);
 
 // 保存
 dao.save(new User().setId("1").setName("张三").setIdx(1));
@@ -115,8 +101,9 @@ PageResult<User> page = dao.page(
 );
 
 // 原生 SQL
-List<User> users = Xdb.sql("select * from T_USER where name like :name")
-    .sqlArg("name", "%张%")
+List<User> users = RD.namedQuery()
+    .sql("select * from T_USER where name like :name")
+    .args("name", "%张%")
     .executeQuery()
     .resultBean(User.class);
 ```
@@ -125,10 +112,12 @@ List<User> users = Xdb.sql("select * from T_USER where name like :name")
 
 ## 核心用法
 
-### 实体 CRUD (BaseDao / EntityService)
+> 所有对外操作统一从 `RD` 入口发起，所有全局配置统一走 `RDConfig`。
+
+### 实体 CRUD (BaseDao)
 
 ```java
-BaseDao<User> dao = RR.dao().baseDao(User.class);
+BaseDao<User> dao = RD.dao().baseDao(User.class);
 
 // 保存
 dao.save(user);
@@ -197,48 +186,54 @@ public interface UserDao extends BaseDao<User> {
 使用：
 
 ```java
-UserDao userDao = RR.dao().of(UserDao.class);
+UserDao userDao = RD.dao().of(UserDao.class);
 List<User> users = userDao.find_by_name_like("张%");
 ```
 
 ### 原生 SQL
 
+roudan 提供两种参数风格：命名参数（`:name`）走 `RD.namedQuery()` / `RD.namedModify()`，占位符（`?`）走 `RD.query()` / `RD.modify()`。
+
 ```java
-// 基础查询
-List<User> users = Xdb.sql("select * from T_USER where type = :type")
-    .sqlArg("type", "ADMIN")
+// 命名参数查询
+List<User> users = RD.namedQuery()
+    .sql("select * from T_USER where type = :type")
+    .args("type", "ADMIN")
     .executeQuery()
     .resultBean(User.class);
 
-// 单行结果
-Row row = Xdb.sql("select * from T_USER where id = :id")
-    .sqlArg("id", "1")
+// 多参数 + 条件参数（值不满足条件时忽略该参数）
+List<User> list = RD.namedQuery()
+    .sql("select * from T_USER where 1=1 and type = :type")
+    .args("type", "ADMIN", type != null)
+    .executeQuery()
+    .resultBean(User.class);
+
+// 占位符查询
+List<User> admins = RD.query()
+    .sql("select * from T_USER where type = ? and idx > ?")
+    .args("ADMIN", 5)
+    .executeQuery()
+    .resultBean(User.class);
+
+// 行结果
+List<Row> rows = RD.namedQuery()
+    .sql("select * from T_USER where id = :id")
+    .args("id", "1")
     .executeQuery()
     .resultRow();
 
 // 增删改
-Xdb.sql("update T_USER set name = :name where id = :id")
-    .sqlArgs(MapUtil.init().add("name", "李四").add("id", "1"))
-    .executeUpdate();
+int rows2 = RD.namedModify()
+    .sql("update T_USER set name = :name where id = :id")
+    .args("name", "李四")
+    .args("id", "1")
+    .execute();
 
 // count
-long count = Xdb.sql("select count(1) from T_USER").executeCount();
-
-// 通过 Table API
-Xdb.table("T_USER")
-    .save()
-    .rowBean(user)
-    .execute();
-
-Xdb.table("T_USER")
-    .delete()
-    .row(Row.init().set("id", "1"))
-    .execute();
-
-Row info = Xdb.table("T_USER")
-    .info()
-    .id("1")
-    .execute();
+long count = RD.namedQuery()
+    .sql("select count(1) from T_USER")
+    .executeCount();
 ```
 
 ### SQL 文件
@@ -252,8 +247,9 @@ SQL 可以从 classpath 加载，支持数据库方言后缀（`.sql.oracle`、`
 // --: and type = :type
 // --: and name like :name
 
-List<Device> devices = Xdb.sqlFile(MyClass.class, "files/sql/device.sql")
-    .sqlArgs(MapUtil.init().add("type", "SENSOR").add("name", "%温度%"))
+List<Device> devices = RD.namedQuery()
+    .sqlFile(MyClass.class, "files/sql/device.sql")
+    .args(MapUtil.init().add("type", "SENSOR").add("name", "%温度%"))
     .executeQuery()
     .resultBean(Device.class);
 ```
@@ -328,7 +324,6 @@ PageResult<User> page = dao.page(wheres);
 ### 分页
 
 ```java
-// 方式一：通过 EntityService
 PageResult<User> page = dao.page(
     WheresBean.init(User.class)
         .eq(User::getType, "NORMAL")
@@ -336,15 +331,8 @@ PageResult<User> page = dao.page(
         .pageSize(20)
 );
 
-// 方式二：原生 SQL 分页
-PageResult<User> page2 = Xdb.sqlPage()
-    .sqlSelect("select u.*")
-    .sqlMain("from T_USER u where u.type = :type")
-    .sqlOrder("order by u.create_time desc")
-    .sqlArg("type", "NORMAL")
-    .pageIndex(1)
-    .pagePerSize(20)
-    .resultBean(User.class);
+// page.getList()   — 当前页数据
+// page.getTotal()  — 总记录数
 ```
 
 ### 多数据源
@@ -354,14 +342,14 @@ PageResult<User> page2 = Xdb.sqlPage()
 **方式一：创建 DAO 时指定数据源**
 
 ```java
-BaseDao<User> dao = RR.dao().baseDao(User.class, "oracle");
+BaseDao<User> dao = RD.dao().baseDao(User.class, "oracle");
 dao.listAll(); // 自动连 oracle
 ```
 
 **方式二：运行时动态切换**
 
 ```java
-BaseDao<User> dao = RR.dao().baseDao(User.class);
+BaseDao<User> dao = RD.dao().baseDao(User.class);
 dao.datasource("oracle").listAll();  // 临时切到 oracle
 ```
 
@@ -377,19 +365,25 @@ public class UserDao extends EntityServiceImp<User> {
 }
 ```
 
+注册多数据源：
+
+```java
+RD.dataSourceConfig(cfg -> cfg
+    .addDataSourceDefault(masterDs)      // 默认数据源
+    .addDataSource(oracleDs, "oracle")   // 命名数据源
+);
+```
+
 ThreadLocal 隔离，多数据源并发互不干扰。
 
 ### 批量操作
 
 ```java
-// 批量保存
-dao.save(userList, 100);  // 每批 100 条
-
-// 批量更新
-dao.update(userList, 200, true);  // 忽略 null
+// 实体批量保存 / 更新
+dao.save(userList, 100);           // 每批 100 条
+dao.update(userList, 200, true);   // 忽略 null
 
 // 批量保存或更新（增量合并）
-List<User> newUsers = fetchFromExternal();
 SaveOrUpdateBatchResult<User> result = dao.saveOrUpdateThenReturn(
     newUsers,
     500,    // batchSize
@@ -397,73 +391,73 @@ SaveOrUpdateBatchResult<User> result = dao.saveOrUpdateThenReturn(
 );
 // result.getSaveList()   — 新增的记录
 // result.getUpdateList()  — 更新的记录
+
+// 原生 SQL 批量
+RD.namedModify()
+    .sql("insert into T_USER(id, name) values(:id, :name)")
+    .argsBatch(list -> {
+        list.add(MapUtil.init().add("id", "1").add("name", "张三").get());
+        list.add(MapUtil.init().add("id", "2").add("name", "李四").get());
+    })
+    .executeBatch(500);
 ```
 
 ### Spring 集成
+
+Spring Boot 项目推荐使用 [roudan-spring-boot-starter](https://github.com/wsaaaqqq/roudan-spring-boot-starter)，自动读取 `spring.datasource` 完成初始化。手动集成：
 
 ```java
 @Configuration
 public class RoudanConfig {
 
-    @Bean
-    public Xdb xdb(DataSource dataSource) {
-        return Xdb.init()
-            .addDataSourceDefault(dataSource);
+    public RoudanConfig(DataSource dataSource) {
+        RD.dataSourceConfig(cfg -> cfg.addDataSourceDefault(dataSource));
+        RDConfig.setUseSpringTransaction(true); // roudan 复用 Spring 管理的连接
     }
 }
 
 // 配合 Spring 事务
 @Transactional
 public void doBusiness() {
-    BaseDao<User> dao = RR.dao().baseDao(User.class);
+    BaseDao<User> dao = RD.dao().baseDao(User.class);
     dao.save(new User().setId("1").setName("test"));
 
-    Xdb.sql("update T_ORDER set status = :s")
-        .sqlArg("s", "PAID")
-        .executeUpdate();
+    RD.namedModify()
+        .sql("update T_ORDER set status = :s")
+        .args("s", "PAID")
+        .execute();
 }
-```
-
-如需 roudan 使用 Spring 管理的连接（参与 Spring 事务），设置：
-
-```java
-XdbConfig.setUseSpringTransaction(true);
 ```
 
 ### 调试与日志
 
 ```java
-// 全局配置
-XdbConfig.setShowSql(true);           // 打印 SQL（默认开启）
-XdbConfig.setShowSqlArgs(true);       // 打印参数（默认开启）
-XdbConfig.setShowSqlCaller(true);     // 打印调用方类/方法（默认开启）
-XdbConfig.setShowSqlExecuteTime(true);// 打印执行耗时（默认开启）
+// 全局配置（统一走 RDConfig）
+RDConfig.setShowSql(true);        // 打印 SQL（默认开启）
+RDConfig.setShowSqlArgs(true);    // 打印参数（默认开启）
+RDConfig.setShowSqlCaller(true);  // 打印调用方类/方法（默认开启）
 
-// 单次查询调试
-Xdb.sql("select * from T_USER")
-    .debug()                           // 打印完整 SQL（含参数替换）
-    .executeQuery();
-
-// 日志级别
-XdbConfig.setLogLevel(Level.INFO);    // 设为 INFO，减少 DEBUG 输出
+// 忽略部分包，避免调用栈定位到框架内部
+RDConfig.setIgnorePackagesForDebug(pkgs -> pkgs.add("com.your.wrapper"));
 ```
 
 ---
 
 ## 配置项
 
+全局配置统一通过 `RDConfig` 设置：
+
 | 配置项 | 说明 | 默认值 |
 |--------|------|--------|
-| `XdbConfig.setOrmType()` | ORM 注解风格 | `OrmType.JPA` |
-| `XdbConfig.setShowSql()` | 是否打印 SQL | `true` |
-| `XdbConfig.setShowSqlArgs()` | 是否打印参数 | `true` |
-| `XdbConfig.setShowSqlCaller()` | 是否打印调用位置 | `true` |
-| `XdbConfig.setShowSqlExecuteTime()` | 是否打印耗时 | `true` |
-| `XdbConfig.setAutoCommit()` | 是否自动提交 | `true` |
-| `XdbConfig.setAutoClose()` | 是否自动关闭连接 | `true` |
-| `XdbConfig.setUseSpringTransaction()` | 使用 Spring 事务 | `false` |
-| `XdbConfig.setSqlDir()` | SQL 文件根目录 | `user.dir` |
-| `XdbConfig.setLogLevel()` | 日志级别 | `DEBUG` |
+| `RDConfig.setOrmType()` | ORM 注解风格 | `OrmType.JPA` |
+| `RDConfig.setShowSql()` | 是否打印 SQL | `true` |
+| `RDConfig.setShowSqlArgs()` | 是否打印参数 | `true` |
+| `RDConfig.setShowSqlCaller()` | 是否打印调用位置 | `true` |
+| `RDConfig.setShowSqlUseSystemOut()` | 用 System.out 打印 SQL | `false` |
+| `RDConfig.setAutoCommit()` | 是否自动提交 | `true` |
+| `RDConfig.setAutoClose()` | 是否自动关闭连接 | `true` |
+| `RDConfig.setUseSpringTransaction()` | 使用 Spring 事务 | `false` |
+| `RDConfig.setSqlDir()` | SQL 文件根目录 | `user.dir` |
 
 ---
 

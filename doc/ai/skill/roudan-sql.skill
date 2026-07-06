@@ -1,0 +1,203 @@
+# Roudan SQL 模式
+
+> 通过 `Xdb.sql()` 执行手写 SQL，使用 `:paramName` 命名参数占位符。
+> 适用于复杂查询、多表关联、报表统计等 DAO 模式覆盖不了的场景。
+
+## 基本用法
+
+```java
+import org.xht.xdb.Xdb;
+import org.xht.xdb.util.MapUtil;
+import org.xht.xdb.vo.PageResult;
+```
+
+## 查询
+
+```java
+// 返回实体列表
+List<User> users = Xdb.sql("select * from T_USER where type = :type")
+    .sqlArg("type", "ADMIN")
+    .executeQuery()
+    .resultBean(User.class);
+
+// 返回单行 Row
+Row row = Xdb.sql("select * from T_USER where id = :id")
+    .sqlArg("id", "1")
+    .executeQuery()
+    .resultRow();
+
+// 返回单值
+String name = Xdb.sql("select name from T_USER where id = :id")
+    .sqlArg("id", "1")
+    .executeQuery()
+    .resultOne(String.class);
+
+// 返回单列列表
+List<String> names = Xdb.sql("select name from T_USER where type = :type")
+    .sqlArg("type", "A")
+    .executeQuery()
+    .resultOneList(String.class);
+
+// 返回 Map
+Map<String, Object> map = Xdb.sql("select * from T_USER where id = :id")
+    .sqlArg("id", "1")
+    .executeQuery()
+    .resultMap();
+
+// 返回 List<Map>
+List<Map<String, Object>> maps = Xdb.sql("select * from T_USER where type = :type")
+    .sqlArg("type", "A")
+    .executeQuery()
+    .resultMapList();
+```
+
+## 增删改
+
+```java
+// 插入
+Xdb.sql("insert into T_USER (id, name, type) values (:id, :name, :type)")
+    .sqlArgs(MapUtil.init().add("id", "1").add("name", "张三").add("type", "A"))
+    .executeUpdate();
+
+// 更新
+int rows = Xdb.sql("update T_USER set name = :name where id = :id")
+    .sqlArgs(MapUtil.init().add("name", "李四").add("id", "1"))
+    .executeUpdate();
+
+// 删除
+Xdb.sql("delete from T_USER where id = :id")
+    .sqlArg("id", "1")
+    .executeUpdate();
+
+// 统计
+long count = Xdb.sql("select count(1) from T_USER where type = :type")
+    .sqlArg("type", "ADMIN")
+    .executeCount();
+```
+
+## 参数设置
+
+```java
+// 逐个参数
+Xdb.sql("...").sqlArg("name", "value");
+
+// 批量参数（推荐）
+Xdb.sql("...").sqlArgs(MapUtil.init()
+    .add("k1", v1)
+    .add("k2", v2));
+
+// 普通 Map
+Map<String, Object> params = new HashMap<>();
+params.put("id", "1");
+Xdb.sql("...").sqlArgs(params);
+```
+
+`MapUtil.init().add(k, v)` 是 roudan 的自定义 Map，链式添加参数。
+
+## Table API（免写 INSERT/UPDATE/DELETE 语句）
+
+```java
+import org.xht.xdb.Xdb;
+import org.xht.xdb.vo.Row;
+import org.xht.xdb.vo.Wheres;
+
+// 插入
+Xdb.table("T_USER").save().rowBean(user).execute();
+
+// 按 ID 删除
+Xdb.table("T_USER").delete().id("1").execute();
+
+// 按 Row 删除
+Xdb.table("T_USER").delete().row(Row.init().set("id", "1")).execute();
+
+// 按 ID 查询单条
+Row info = Xdb.table("T_USER").info().id("1").execute();
+
+// 条件查询列表
+List<User> list = Xdb.table("T_USER").list()
+    .wheres(Wheres.init().eq("type", "A"))
+    .execute(User.class);
+```
+
+## 分页查询
+
+```java
+import org.xht.xdb.Xdb;
+import org.xht.xdb.vo.PageResult;
+
+PageResult<User> page = Xdb.sqlPage()
+    .sqlSelect("select u.*")
+    .sqlMain("from T_USER u where u.type = :type")
+    .sqlOrder("order by u.create_time desc")
+    .sqlArg("type", "NORMAL")
+    .pageIndex(1)
+    .pagePerSize(20)
+    .resultBean(User.class);
+```
+
+框架自动生成对应的 `count(1)` 查询和方言适配的分页 SQL。
+
+### 带动态条件的复杂分页
+
+```java
+import org.xht.xdb.vo.SqlBuild;
+
+String name = params.get("name");  // 可能为 null
+
+PageResult<User> page = Xdb.sqlPage()
+    .sqlSelect("select u.*")
+    .sqlMain("from T_USER u",
+        SqlBuild.init()
+            .addWhereStart()
+            .addIfNotEmpty("and u.type = :type", "type", params.get("type"))
+            .addIfNotEmpty("and u.name like :name", "name", name)
+    )
+    .sqlOrder("order by u.create_time desc")
+    .pageIndex(1).pagePerSize(20)
+    .resultBean(User.class);
+```
+
+## 多数据源
+
+```java
+// 切换数据源后执行
+Xdb.datasource("oracle").sql("select * from T_USER").executeQuery();
+
+// 或先切换
+Xdb.selectDataSourceByName("oracle");
+Xdb.sql("select * from T_USER").executeQuery();
+Xdb.selectDataSourceDefault();  // 切回
+```
+
+## 事务
+
+```java
+Connection conn = Xdb.getConnection();
+conn.setAutoCommit(false);
+Xdb.setConnection(conn);
+
+try {
+    Xdb.sql("insert into T_ORDER (id,amt) values (:id,:amt)")
+        .sqlArgs(MapUtil.init().add("id","1").add("amt",100))
+        .executeUpdate();
+    Xdb.sql("update T_ACCOUNT set bal = bal - :amt where id = :aid")
+        .sqlArgs(MapUtil.init().add("amt",100).add("aid","A1"))
+        .executeUpdate();
+    conn.commit();
+} catch (Exception e) {
+    conn.rollback();
+} finally {
+    XdbConfig.setAutoClose(true); // 自动关闭连接
+}
+
+// Spring 事务：设置后直接用 @Transactional
+XdbConfig.setUseSpringTransaction(true);
+```
+
+## 调试
+
+```java
+Xdb.sql("select * from T_USER").debug().executeQuery();  // 单次打印完整SQL
+XdbConfig.setShowSql(true);       // 全局打印
+XdbConfig.setShowSqlArgs(true);   // 打印参数值
+```

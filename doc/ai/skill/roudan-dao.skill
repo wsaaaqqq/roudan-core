@@ -1,0 +1,194 @@
+# Roudan DAO 模式
+
+> 通过 `BaseDao<T>` / `EntityService<T>` 进行面向实体的单表 CRUD 操作。
+> 支持标准 CRUD、Wheres 条件构造、动态方法代理、批量操作。
+
+## 获取 BaseDao
+
+```java
+// 默认数据源
+BaseDao<User> dao = RR.dao().baseDao(User.class);
+
+// 指定数据源
+BaseDao<User> dao = RR.dao().baseDao(User.class, "oracle");
+
+// 继承方式（Spring @Repository）
+@Repository
+public class UserDao extends EntityServiceImp<User> {
+    public UserDao() { super(User.class, "oracle"); }
+}
+```
+
+## 标准 CRUD
+
+### 增
+
+```java
+dao.save(user);                        // 单条
+dao.save(userList, 100);               // 批量，batchSize=100
+dao.saveOrUpdate(user);                // 智能合并
+dao.saveOrUpdate(userList, 200, true); // 批量合并，忽略null
+```
+
+### 删
+
+```java
+dao.delete(user);                      // 按实体
+dao.deleteById("id1");                 // 按ID
+dao.deleteById(idList, 100);           // 批量按ID
+```
+
+### 改
+
+```java
+dao.update(user);                      // 按主键更新
+dao.update(user, true);                // 忽略null字段
+dao.update(userList, 200, true);       // 批量更新
+```
+
+### 查
+
+```java
+User u = dao.getById("1");             // 按ID查
+Optional<User> opt = dao.getByIdOpt("1");
+List<User> all = dao.listAll();        // 全量
+List<User> list = dao.list(wheres);    // 条件查询（见Wheres章节）
+List<User> ids = dao.getByIds(idList); // 批量按ID
+Map<String, User> map = dao.infos(idList); // Map<ID, Entity>
+boolean exist = dao.existId("1");      // 存在性
+long count = dao.count();              // 总数
+long count = dao.count(wheres);        // 条件统计
+List<String> ids = dao.ids(String.class); // 所有ID
+```
+
+## Wheres 条件构造器
+
+### 字符串风格
+
+```java
+import org.xht.xdb.vo.Wheres;
+
+Wheres wheres = Wheres.init()
+    .eq("type", "ADMIN")               // =
+    .ne("status", "DELETED")           // <>
+    .gt("age", 18)                     // >
+    .ge("score", 60)                   // >=
+    .lt("age", 60)                     // <
+    .le("score", 100)                  // <=
+    .contain("name", "张")             // LIKE '%张%'
+    .startWith("name", "张")           // LIKE '张%'
+    .endWith("name", "伟")             // LIKE '%伟'
+    .in("dept", Arrays.asList("D1"))   // IN
+    .notIn("type", excludeList)        // NOT IN
+    .between("age", 18, 60, true)      // BETWEEN
+    .isNull("remark")                  // IS NULL
+    .notNull("email")                  // IS NOT NULL
+    .pageIndex(1).pageSize(20);        // 分页
+```
+
+子条件组：
+
+```java
+Wheres wheres = Wheres.init()
+    .eq("status", "ACTIVE")
+    .sub(sub -> sub.or().eq("type", "A").eq("type", "B"));
+// → WHERE status=:x AND (type=:y OR type=:z)
+```
+
+条件执行（guard）：
+
+```java
+.contain("name", keyword, () -> keyword != null)  // keyword非空时才生效
+```
+
+### Lambda 类型安全风格
+
+```java
+import org.xht.xdb.vo.WheresBean;
+
+WheresBean<User> w = WheresBean.init(User.class)
+    .eq(User::getType, "ADMIN")
+    .gt(User::getAge, 18)
+    .contain(User::getName, "张")
+    .in(User::getDept, deptList)
+    .anyColContain("关键词", User::getName, User::getRemark)  // 多字段模糊搜索
+    .pageIndex(1).pageSize(20);
+```
+
+### 使用 Wheres
+
+```java
+List<User> list = dao.list(wheres);
+PageResult<User> page = dao.page(wheres);
+long count = dao.count(wheres);
+```
+
+## 分页
+
+```java
+PageResult<User> page = dao.page(
+    Wheres.init().eq("type", "A").pageIndex(1).pageSize(20)
+);
+List<User> rows = page.getRows();
+long total = page.getTotal();
+```
+
+## 动态 DAO（命名约定）
+
+定义接口，无需实现——框架通过 JDK 代理自动生成 SQL。
+
+```java
+public interface UserDao extends BaseDao<User> {
+
+    List<User> find_by_name(String name);                // WHERE name=:name
+    List<User> find_by_name_and_type(String n, String t); // WHERE name=:n AND type=:t
+    List<User> find_by_name_or_type(String n, String t);  // WHERE name=:n OR type=:t
+
+    Long count_by_name(String name);
+    boolean exists_by_name(String name);
+    void delete_by_name(String name);
+
+    // 操作符后缀
+    List<User> find_by_name_like(String name);           // LIKE :name
+    List<User> find_by_name_contain(String name);        // LIKE '%name%'
+    List<User> find_by_name_start_with(String name);     // LIKE 'name%'
+    List<User> find_by_name_end_with(String name);       // LIKE '%name'
+    List<User> find_by_idx_gt(Integer i);                // >
+    List<User> find_by_idx_lt(Integer i);                // <
+    List<User> find_by_idx_gte(Integer i);               // >=
+    List<User> find_by_idx_lte(Integer i);               // <=
+    List<User> find_by_name_not(String name);            // <>
+    List<User> find_by_name_in(List<String> names);      // IN
+    List<User> find_by_idx_between(List<Integer> range); // BETWEEN
+
+    List<User> find_by_idx_gt_and_name_start_with(Integer idx, String name);
+}
+
+// 使用
+UserDao userDao = RR.dao().of(UserDao.class);
+List<User> users = userDao.find_by_name_like("张%");
+```
+
+## 批量操作
+
+```java
+dao.save(list, 100);                    // 批量插入
+dao.update(list, 200, true);            // 批量更新（忽略null）
+dao.saveOrUpdate(list, 200, true);      // 批量智能合并
+
+// 合并并返回结果
+SaveOrUpdateBatchResult<User> r = dao.saveOrUpdateThenReturn(list, 500, true);
+r.getSaveList();   // 新增的
+r.getUpdateList(); // 更新的
+```
+
+## 多数据源
+
+```java
+// 创建时指定
+BaseDao<User> dao = RR.dao().baseDao(User.class, "oracle");
+
+// 运行时切换
+dao.datasource("oracle").listAll();
+dao.datasourceDefault().listAll();
+```

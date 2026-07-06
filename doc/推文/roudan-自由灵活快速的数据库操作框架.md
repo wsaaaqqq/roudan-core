@@ -390,7 +390,7 @@ result.getUpdateList();  // 更新了哪些 → 已批量 UPDATE
 <dependency>
     <groupId>io.github.wsaaaqqq</groupId>
     <artifactId>roudan-core</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
 </dependency>
 ```
 
@@ -460,6 +460,6 @@ List<User> users = Xdb.sql("select * from T_USER where age > :age")
 
 仓库地址：[https://github.com/wsaaaqqq/roudan-core](https://github.com/wsaaaqqq/roudan-core)
 
-Maven 中央仓库已发布，坐标：`io.github.wsaaaqqq:roudan-core:0.0.1`
+Maven 中央仓库已发布，坐标：`io.github.wsaaaqqq:roudan-core:0.0.2`
 
 觉得有用的话，来个 Star ⭐，欢迎 Issues 和 PR。
