@@ -31,7 +31,7 @@ public interface EntityKeysService<T> {
      * @param batchSize     批量大小
      * @param ignoreNulls   忽略空值
      * @param computeReturn 计算回报
-     * @return {@link SaveOrUpdateBatchResult }<{@link T }>
+     * @return {@link SaveOrUpdateBatchResult}&lt;T&gt;
      */
     SaveOrUpdateBatchResult<T> saveOrUpdateThenReturn(Collection<T> list, Collection<Row> idsInDb, Integer batchSize,
             boolean ignoreNulls, boolean computeReturn

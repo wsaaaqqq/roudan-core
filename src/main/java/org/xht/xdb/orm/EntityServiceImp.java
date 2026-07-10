@@ -669,7 +669,7 @@ public class EntityServiceImp<T> implements EntityService<T> {
      * @param whereSql  where部分的sql
      * @param pageIndex 序号从1起始
      * @param pageSize  分页大小
-     * @return {@link PageResult }<{@link T }>
+     * @return {@link PageResult}&lt;T&gt;
      */
     @Override
     public @NonNull PageResult<T> page(String whereSql, Number pageIndex, Number pageSize) {

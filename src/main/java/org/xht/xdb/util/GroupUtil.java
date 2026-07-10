@@ -16,6 +16,9 @@ public class GroupUtil {
 
     public static <T, K> Map<K, T> groupByKey(Collection<T> list, Function<T, K> key) {
         Map<K, T> data = new HashMap<>();
+        if (list == null || list.isEmpty()) {
+            return data;
+        }
         list.forEach(item -> {
             K k = key.apply(item);
             if (k != null) {
@@ -27,6 +30,9 @@ public class GroupUtil {
 
     public static <T, K> Map<K, List<T>> groupBy(Collection<T> list, Function<T, K> key) {
         Map<K, List<T>> data = new HashMap<>();
+        if (list == null || list.isEmpty()) {
+            return data;
+        }
         list.forEach(item -> {
             K k = key.apply(item);
             if (k != null) {

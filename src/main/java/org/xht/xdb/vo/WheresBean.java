@@ -287,7 +287,7 @@ public class WheresBean<T> {
      * 第几页
      *
      * @param pageIndex 序号从1起始
-     * @return {@link WheresBean }<{@link T }>
+     * @return {@link WheresBean}&lt;T&gt;
      */
     public WheresBean<T> pageIndex(Number pageIndex) {
         wheres.pageIndex(pageIndex);
