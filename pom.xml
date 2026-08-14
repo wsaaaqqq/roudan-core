@@ -6,6 +6,7 @@
     <groupId>io.github.wsaaaqqq</groupId>
     <artifactId>roudan-core</artifactId>
     <version>0.0.5</version>
+<!--    <version>0.0.1</version>-->
     <description>roudan core for jdbc</description>
     <name>roudan core for jdbc</name>
             <url>https://github.com/wsaaaqqq/roudan-core</url>
@@ -278,7 +279,7 @@
                 <configuration>
                     <!-- 当电脑有多个秘钥时，需明确指定密钥ID -->
                     <keyname>${gpgKeyId}</keyname>
-                    <!-- passphrase 通过环境变量 MAVEN_GPG_PASSPHRASE 传入 -->
+                    <passphrase>${env.MAVEN_GPG_PASSPHRASE}</passphrase>
                     <gpgArguments>
                         <arg>--no-tty</arg>
                         <arg>--pinentry-mode</arg>

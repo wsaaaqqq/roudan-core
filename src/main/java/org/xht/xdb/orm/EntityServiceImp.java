@@ -16,6 +16,11 @@ import org.xht.xdb.util.MapUtil;
 import org.xht.xdb.util.SerializableFunction;
 import org.xht.xdb.vo.*;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -643,6 +648,33 @@ public class EntityServiceImp<T> implements EntityService<T> {
                     .resultBean(rClass);
         } else {
             String _columns = String.join(" , ", columns);
+            if (columns.size() == 1 && (
+                    rClass == String.class
+                            || rClass == Short.class
+                            || rClass == Integer.class
+                            || rClass == Long.class
+                            || rClass == BigInteger.class
+                            || rClass == Float.class
+                            || rClass == Double.class
+                            || rClass == BigDecimal.class
+                            || rClass == Byte.class
+                            || rClass == Boolean.class
+                            || rClass == Character.class
+                            || rClass == LocalDateTime.class
+                            || rClass == LocalDate.class
+                            || rClass == LocalTime.class
+            )) {
+                return Xdb.sql("select " +
+                                _columns +
+                                " from " +
+                                tableName +
+                                " " +
+                                Optional.ofNullable(whereSql).orElse(""))
+                        .sqlArgs(args)
+                        .executeQuery()
+                        .resultFirstColumn(rClass);
+
+            }
             return Xdb.sql("select " + _columns + " from " + tableName + " " + Optional.ofNullable(whereSql).orElse(""))
                     .sqlArgs(args)
                     .executeQuery()
