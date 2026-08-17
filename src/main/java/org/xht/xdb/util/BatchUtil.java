@@ -6,10 +6,12 @@ import java.util.function.Function;
 public class BatchUtil {
 
     public static <R, E> List<R> list(Collection<E> inputs, int batchSize, Function<Collection<E>, Collection<R>> mapping) {
+        inputs = inputs == null ? new ArrayList<>(0) : inputs;
         return collection(inputs, batchSize, mapping, new ArrayList<>(inputs.size()));
     }
 
     public static <R, E> Set<R> set(Collection<E> inputs, int batchSize, Function<Collection<E>, Collection<R>> mapping) {
+        inputs = inputs == null ? new ArrayList<>(0) : inputs;
         return collection(inputs, batchSize, mapping, new HashSet<>(inputs.size()));
     }
 
