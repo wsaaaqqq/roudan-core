@@ -219,7 +219,8 @@ public class SqlTool implements Serializable {
         }
         int size = rows.size();
         if (size > 1) {
-            debugObject(sql, String.format("args cunt: %s , first row: ↓ \n%s", size, ListUtil.joinToString(rows.get(0))));
+            debugObject(sql,
+                    String.format("args cunt: %s , first row: ↓ \n%s", size, ListUtil.joinToString(rows.get(0))));
         } else {
             debugObject(sql, ListUtil.joinToString(rows.get(0)));
         }
@@ -251,15 +252,11 @@ public class SqlTool implements Serializable {
             for (String key : keySet) {
                 Object value = sqlArgs.get(key);
                 if (value instanceof String) {
-                    _sql = _sql.replaceAll(
-                            ":" + key + "[ >\n (\r\n)=\\|\\)\\(,]{1}",
-                            String.format("'%s'" + part, value, key)
-                    );
+                    _sql = _sql.replaceAll(":" + key + "[ >\n (\r\n)=\\|\\)\\(,]{1}",
+                            String.format("'%s'" + part, value, key));
                 } else {
-                    _sql = _sql.replaceAll(
-                            ":" + key + "[ >\n (\r\n)=\\|\\)\\(,]{1}",
-                            String.format("%s" + part, value, key)
-                    );
+                    _sql = _sql.replaceAll(":" + key + "[ >\n (\r\n)=\\|\\)\\(,]{1}",
+                            String.format("%s" + part, value, key));
                 }
             }
         }
@@ -277,14 +274,12 @@ public class SqlTool implements Serializable {
                         "\n---------------------- xdb log [config in XdbConfig] -----------------------%s\n%s\n%s",
                         caller,
                         _sql,
-                        sqlArgs
-                );
+                        sqlArgs);
             } else {
                 msg = String.format(
                         "\n---------------------- xdb log [config in XdbConfig] -----------------------%s\n%s",
                         caller,
-                        _sql
-                );
+                        _sql);
             }
             debug(msg);
         }
@@ -528,6 +523,7 @@ public class SqlTool implements Serializable {
     }
 
     private void arrayArgs2SingleArg(String key, Object[] values) {
+        if (values.length == 0) return;
         String _key = String.format("%s__%s", key, 0);
         String keyJoin = String.format(" :%s__0 ", key);
         this.sqlArgs.del(key).add(_key, values[0]);
