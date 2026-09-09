@@ -215,6 +215,7 @@ public class BeanUtil {
                         Object value = field.get(bean);
                         if (isJson) {
                             row.put(colName, JsonUtils.toJson(value));
+                            row.put(colName, JsonUtils.toJson(value));
                         } else {
                             row.put(colName, value);
                         }

@@ -4,6 +4,13 @@ import cn.hutool.cache.CacheUtil;
 import cn.hutool.cache.impl.LRUCache;
 
 import java.lang.reflect.*;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -22,22 +29,37 @@ public class JsonUtils {
     private static final Method JACKSON_WRITE_STR = initJacksonWrite();
 
     private static Method init(String cls, String m, Class<?>... pt) {
-        try { return Class.forName(cls).getMethod(m, pt); }
-        catch (Exception e) { return null; }
+        try {
+            return Class.forName(cls).getMethod(m, pt);
+        } catch (Exception e) {
+            return null;
+        }
     }
+
     private static Object initMapper() {
-        try { return Class.forName("com.fasterxml.jackson.databind.ObjectMapper").newInstance(); }
-        catch (Exception e) { return null; }
+        try {
+            return Class.forName("com.fasterxml.jackson.databind.ObjectMapper").newInstance();
+        } catch (Exception e) {
+            return null;
+        }
     }
+
     private static Method initJacksonRead() {
         if (JACKSON_MAPPER == null) return null;
-        try { return JACKSON_MAPPER.getClass().getMethod("readValue", String.class, Class.class); }
-        catch (Exception e) { return null; }
+        try {
+            return JACKSON_MAPPER.getClass().getMethod("readValue", String.class, Class.class);
+        } catch (Exception e) {
+            return null;
+        }
     }
+
     private static Method initJacksonWrite() {
         if (JACKSON_MAPPER == null) return null;
-        try { return JACKSON_MAPPER.getClass().getMethod("writeValueAsString", Object.class); }
-        catch (Exception e) { return null; }
+        try {
+            return JACKSON_MAPPER.getClass().getMethod("writeValueAsString", Object.class);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public static Object toBeanCompatible(String text, Field field) {
@@ -179,24 +201,34 @@ public class JsonUtils {
     @SuppressWarnings("unchecked")
     private static <T> T fromBean(String json, Class<T> clazz) {
         if (HUTOOL_TO_BEAN != null) {
-            try { return (T) HUTOOL_TO_BEAN.invoke(null, json, clazz); }
-            catch (Exception ignore) {}
+            try {
+                return (T) HUTOOL_TO_BEAN.invoke(null, json, clazz);
+            } catch (Exception ignore) {
+            }
         }
         if (JACKSON_MAPPER != null && JACKSON_READ_CLASS != null) {
-            try { return (T) JACKSON_READ_CLASS.invoke(JACKSON_MAPPER, json, clazz); }
-            catch (Exception e) { throw new RuntimeException(e.getCause()); }
+            try {
+                return (T) JACKSON_READ_CLASS.invoke(JACKSON_MAPPER, json, clazz);
+            } catch (Exception e) {
+                throw new RuntimeException(e.getCause());
+            }
         }
         throw new RuntimeException("无hutool/jackson可做反序列化");
     }
 
     public static String toJson(Object value) {
         if (HUTOOL_TO_JSONSTR != null) {
-            try { return (String) HUTOOL_TO_JSONSTR.invoke(null, value); }
-            catch (Exception ignore) {}
+            try {
+                return (String) HUTOOL_TO_JSONSTR.invoke(null, value);
+            } catch (Exception ignore) {
+            }
         }
         if (JACKSON_MAPPER != null && JACKSON_WRITE_STR != null) {
-            try { return (String) JACKSON_WRITE_STR.invoke(JACKSON_MAPPER, value); }
-            catch (Exception e) { throw new RuntimeException(e.getCause()); }
+            try {
+                return (String) JACKSON_WRITE_STR.invoke(JACKSON_MAPPER, value);
+            } catch (Exception e) {
+                throw new RuntimeException(e.getCause());
+            }
         }
         throw new RuntimeException("无hutool/jackson可做序列化");
     }
@@ -204,8 +236,10 @@ public class JsonUtils {
     @SuppressWarnings("unchecked")
     private static <T> List<T> fromList(String json, Class<T> elem) {
         if (HUTOOL_TO_LIST != null) {
-            try { return (List<T>) HUTOOL_TO_LIST.invoke(null, json, elem); }
-            catch (Exception ignore) {}
+            try {
+                return (List<T>) HUTOOL_TO_LIST.invoke(null, json, elem);
+            } catch (Exception ignore) {
+            }
         }
         // jackson降级：constructCollectionType
         try {
@@ -215,12 +249,25 @@ public class JsonUtils {
             Method m = JACKSON_MAPPER.getClass().getMethod("readValue", String.class,
                     Class.forName("com.fasterxml.jackson.databind.JavaType"));
             return (List<T>) m.invoke(JACKSON_MAPPER, json, javaType);
-        } catch (Exception e) { throw new RuntimeException(e.getCause()); }
+        } catch (Exception e) {
+            throw new RuntimeException(e.getCause());
+        }
     }
 
     private static boolean isSimple(Class<?> c) {
-        return c.isPrimitive() || c == Boolean.class || c == Character.class
-                || Number.class.isAssignableFrom(c) || CharSequence.class.isAssignableFrom(c);
+        return c.isPrimitive()
+                || c == Boolean.class
+                || c == Character.class
+                || Timestamp.class.isAssignableFrom(c)
+                || java.util.Date.class.isAssignableFrom(c)
+                || Date.class.isAssignableFrom(c)
+                || LocalDateTime.class.isAssignableFrom(c)
+                || LocalDate.class.isAssignableFrom(c)
+                || LocalTime.class.isAssignableFrom(c)
+                || Number.class.isAssignableFrom(c)
+                || BigDecimal.class.isAssignableFrom(c)
+                || BigInteger.class.isAssignableFrom(c)
+                || CharSequence.class.isAssignableFrom(c);
     }
 
     private static Object parseSimple(String v, Class<?> c) {
