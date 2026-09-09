@@ -135,7 +135,7 @@ public class BeanUtil {
     }
 
     public static <T> List<Row> toRows(Collection<T> beans, Function<Row, Boolean> test, BiConsumer<T, Row> success,
-            BiConsumer<T, Row> fail
+                                       BiConsumer<T, Row> fail
     ) {
         List<Row> rows = new ArrayList<>();
         if (beans == null || beans.isEmpty()) {
@@ -192,6 +192,7 @@ public class BeanUtil {
             }
             Map<Field, Boolean> notIgnoreColMap = new HashMap<>();
             Map<Field, String> colNameMap = new HashMap<>();
+            Map<Field, Boolean> colTypeIsJson = new HashMap<>();
             for (T bean : beans) {
                 Row row = new Row();
                 for (Field field : fields) {
@@ -206,7 +207,17 @@ public class BeanUtil {
                             colName = OrmAnnoUtil.getColName(bean, field.getName());
                             colNameMap.put(field, colName);
                         }
-                        row.put(colName, field.get(bean));
+                        Boolean isJson = colTypeIsJson.get(field);
+                        if (isJson == null) {
+                            isJson = JsonUtils.isCompatible(field);
+                            colTypeIsJson.put(field, isJson);
+                        }
+                        Object value = field.get(bean);
+                        if (isJson) {
+                            row.put(colName, JsonUtils.toJson(value));
+                        } else {
+                            row.put(colName, value);
+                        }
                     }
                 }
                 rows.add(row);
