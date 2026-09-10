@@ -424,25 +424,8 @@ public class ResultSetUtil {
             throws SQLException {
         T bean = null;
         if (resultSet != null && resultSet.next()) {
-            if (String.class.equals(beanClass))
-                return (T) resultSet.getString(1);
-            if (Long.class.equals(beanClass))
-                return (T) Long.valueOf(resultSet.getLong(1));
-            if (Integer.class.equals(beanClass))
-                return (T) Integer.valueOf(resultSet.getInt(1));
-            if (Double.class.equals(beanClass))
-                return (T) Double.valueOf(resultSet.getDouble(1));
-            if (Float.class.equals(beanClass))
-                return (T) Float.valueOf(resultSet.getFloat(1));
-            if (BigInteger.class.equals(beanClass))
-                return (T) Optional.ofNullable(resultSet.getObject(1))
-                                   .map(Object::toString)
-                                   .map(BigInteger::new)
-                                   .orElse(null);
-            if (BigDecimal.class.equals(beanClass))
-                return (T) resultSet.getBigDecimal(1);
-            if (Timestamp.class.equals(beanClass))
-                return (T) resultSet.getTimestamp(1);
+            if (scalarConverters.containsKey(beanClass))
+                return (T) convertScalar(resultSet.getObject(1), beanClass);
             //复杂对象
             ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
             int colCount = resultSetMetaData.getColumnCount() + 1;
@@ -624,8 +607,46 @@ public class ResultSetUtil {
     private static final SetCharacterField setCharacterField = new SetCharacterField();
     private static final SetByteArrayField setByteArrayField = new SetByteArrayField();
     private static final SetShortField setShortField = new SetShortField();
+    private static final SetByteField setByteField = new SetByteField();
     private static final SetFieldWithValueDefault setFieldWithValueDefault = new SetFieldWithValueDefault();
 
+    private static final Map<Class<?>, SetFieldValueFunction> fieldConverters = new HashMap<>();
+    private static final Map<Class<?>, Function<Object, ?>> scalarConverters = new HashMap<>();
+
+    static {
+        registerConverter(setIntegerField, SetIntegerField::parse, Integer.class, int.class);
+        registerConverter(setLongField, SetLongField::parse, Long.class, long.class);
+        registerConverter(setDoubleField, SetDoubleField::parse, Double.class, double.class);
+        registerConverter(setFloatField, SetFloatField::parse, Float.class, float.class);
+        registerConverter(setBooleanField, SetBooleanField::parse, Boolean.class, boolean.class);
+        registerConverter(setShortField, SetShortField::parse, Short.class, short.class);
+        registerConverter(setByteField, SetByteField::parse, Byte.class, byte.class);
+        registerConverter(setCharacterField, SetCharacterField::parse, Character.class, char.class);
+        registerConverter(setStringField, SetStringField::parse, String.class);
+        registerConverter(setBigDecimalField, SetBigDecimalField::parse, BigDecimal.class);
+        registerConverter(setBigIntegerField,
+                value -> value instanceof BigInteger ? value : new BigInteger(value.toString()), BigInteger.class);
+        registerConverter(setTimestampField, SetTimestampField::parse, Timestamp.class);
+        registerConverter(setLocalDateTimeField, SetLocalDateTimeField::parse, LocalDateTime.class);
+        registerConverter(setLocalDateField, SetLocalDateField::parse, LocalDate.class);
+        registerConverter(setLocalTimeField, SetLocalTimeField::parse, LocalTime.class);
+        registerConverter(setByteArrayField, SetByteArrayField::parse, byte[].class);
+    }
+
+    private static void registerConverter(SetFieldValueFunction fieldConverter,
+            Function<Object, ?> scalarConverter, Class<?>... types) {
+        for (Class<?> type : types) {
+            fieldConverters.put(type, fieldConverter);
+            scalarConverters.put(type, scalarConverter);
+        }
+    }
+
+    private static Object convertScalar(Object value, Class<?> type) {
+        if (value == null)
+            return null;
+        Function<Object, ?> converter = scalarConverters.get(type);
+        return converter == null ? value : converter.apply(value);
+    }
 
     public static <T> void setFieldValue(FieldVo fieldVo, T bean, Object value) {
         Field field = fieldVo.getField();
@@ -635,56 +656,7 @@ public class ResultSetUtil {
             Class<?> type = field.getType();
             SetFieldValueFunction setFieldValueFunction = fieldVo.getSetFieldValueFunction();
             if (setFieldValueFunction == null) {
-                String simpleName = type.getSimpleName();
-                switch (simpleName) {
-                    case "Integer":
-                        setFieldValueFunction = setIntegerField;
-                        break;
-                    case "BigDecimal":
-                        setFieldValueFunction = setBigDecimalField;
-                        break;
-                    case "Boolean":
-                        setFieldValueFunction = setBooleanField;
-                        break;
-                    case "Long":
-                        setFieldValueFunction = setLongField;
-                        break;
-                    case "BigInteger":
-                        setFieldValueFunction = setBigIntegerField;
-                        break;
-                    case "Double":
-                        setFieldValueFunction = setDoubleField;
-                        break;
-                    case "Float":
-                        setFieldValueFunction = setFloatField;
-                        break;
-                    case "String":
-                        setFieldValueFunction = setStringField;
-                        break;
-                    case "Character":
-                        setFieldValueFunction = setCharacterField;
-                        break;
-                    case "byte[]":
-                        setFieldValueFunction = setByteArrayField;
-                        break;
-                    case "LocalDateTime":
-                        setFieldValueFunction = setLocalDateTimeField;
-                        break;
-                    case "LocalDate":
-                        setFieldValueFunction = setLocalDateField;
-                        break;
-                    case "LocalTime":
-                        setFieldValueFunction = setLocalTimeField;
-                        break;
-                    case "Timestamp":
-                        setFieldValueFunction = setTimestampField;
-                        break;
-                    case "Short":
-                        setFieldValueFunction = setShortField;
-                        break;
-                    default:
-                        setFieldValueFunction = setFieldWithValueDefault;
-                }
+                setFieldValueFunction = fieldConverters.getOrDefault(type, setFieldWithValueDefault);
             }
             setFieldValueFunction.apply(bean, field, value);
             fieldVo.setSetFieldValueFunction(setFieldValueFunction);
@@ -772,44 +744,7 @@ public class ResultSetUtil {
     public static <T> List<T> toListBeanFirstColumn(ResultSet resultSet, Class<T> ignoredBeanClass) {
         List<T> beans = new ArrayList<>();
         while (resultSet.next()) {
-            Object value = resultSet.getObject(1);
-            if (value == null) {
-                beans.add(null);
-            } else {
-                if (ignoredBeanClass == String.class) {
-                    beans.add((T) SetStringField.parse(value));
-                } else if (ignoredBeanClass == Integer.class) {
-                    beans.add((T) SetIntegerField.parse(value));
-                } else if (ignoredBeanClass == Long.class) {
-                    beans.add((T) SetLongField.parse(value));
-                } else if (ignoredBeanClass == Double.class) {
-                    beans.add((T) SetDoubleField.parse(value));
-                } else if (ignoredBeanClass == Float.class) {
-                    beans.add((T) SetFloatField.parse(value));
-                } else if (ignoredBeanClass == BigDecimal.class) {
-                    beans.add((T) SetBigDecimalField.parse(value));
-                } else if (ignoredBeanClass == BigInteger.class) {
-                    beans.add((T) SetIntegerField.parse(value));
-                } else if (ignoredBeanClass == Boolean.class) {
-                    beans.add((T) SetBooleanField.parse(value));
-                } else if (ignoredBeanClass == Timestamp.class) {
-                    beans.add((T) SetTimestampField.parse(value));
-                } else if (ignoredBeanClass == LocalDateTime.class) {
-                    beans.add((T) SetLocalDateTimeField.parse(value));
-                } else if (ignoredBeanClass == LocalDate.class) {
-                    beans.add((T) SetLocalDateField.parse(value));
-                } else if (ignoredBeanClass == LocalTime.class) {
-                    beans.add((T) SetLocalTimeField.parse(value));
-                } else if (ignoredBeanClass == Character.class) {
-                    beans.add((T) SetCharacterField.parse(value));
-                } else if (ignoredBeanClass == byte[].class) {
-                    beans.add((T) SetByteArrayField.parse(value));
-                } else if (ignoredBeanClass == Short.class) {
-                    beans.add((T) SetShortField.parse(value));
-                } else {
-                    beans.add((T) value);
-                }
-            }
+            beans.add((T) convertScalar(resultSet.getObject(1), ignoredBeanClass));
         }
         return beans;
     }

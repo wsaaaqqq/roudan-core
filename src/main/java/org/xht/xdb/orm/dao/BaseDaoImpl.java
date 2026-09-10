@@ -1,6 +1,5 @@
 package org.xht.xdb.orm.dao;
 
-import cn.hutool.core.util.TypeUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.xht.xdb.orm.EntityServiceImp;
 
@@ -8,6 +7,9 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 通用Dao实现类，支持命名约定方法
@@ -47,51 +49,57 @@ public class BaseDaoImpl<T> extends EntityServiceImp<T> implements BaseDao<T> {
 
     @SuppressWarnings("unchecked")
     private static <T> Class<T> getEntityClass(Class<?> daoInterface) {
-        // 获取所有泛型接口
-        Type[] genericInterfaces = daoInterface.getGenericInterfaces();
+        Class<?> entityClass = resolveEntityClass(daoInterface, new HashMap<>());
+        if (entityClass != null) {
+            return (Class<T>) entityClass;
+        }
+        throw new IllegalArgumentException("无法从DAO接口中解析出实体类型T");
+    }
 
-        for (Type type : genericInterfaces) {
-            // 检查是否为参数化类型（Java 8 需拆分类型判断与变量声明）
-            if (type instanceof ParameterizedType) {
-                ParameterizedType parameterizedType = (ParameterizedType) type;
-
-                // 获取原始类型（即BaseDao.class）
-                Type rawType = parameterizedType.getRawType();
-
-                // 确认是BaseDao的实现（Java 8 需拆分类型判断与变量声明）
-                if (rawType instanceof Class) {
-                    Class<?> rawClass = (Class<?>) rawType;
-                    if (BaseDao.class.isAssignableFrom(rawClass)) {
-                        // 获取泛型实际参数（即T）
-                        Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
-                        if (actualTypeArguments.length > 0) {
-                            Type entityType = actualTypeArguments[0];
-
-                            // 处理T本身是泛型的情况（如BaseDao<List<User>>）
-                            if (entityType instanceof ParameterizedType) {
-                                entityType = ((ParameterizedType) entityType).getRawType();
-                            }
-
-                            // 转换为Class对象（Java 8 需拆分类型判断与强制转换）
-                            if (entityType instanceof Class) {
-                                return (Class<T>) entityType;
-                            }
-                        }
-                    }
-                }
+    private static Class<?> resolveEntityClass(Type type, Map<TypeVariable<?>, Type> inheritedBindings) {
+        // 每条继承分支维护自己的绑定，最终只读取 BaseDao<T> 的 T。
+        Map<TypeVariable<?>, Type> bindings = new HashMap<>(inheritedBindings);
+        Class<?> rawClass;
+        if (type instanceof ParameterizedType) {
+            ParameterizedType parameterizedType = (ParameterizedType) type;
+            rawClass = (Class<?>) parameterizedType.getRawType();
+            TypeVariable<?>[] variables = rawClass.getTypeParameters();
+            Type[] arguments = parameterizedType.getActualTypeArguments();
+            for (int i = 0; i < variables.length; i++) {
+                bindings.put(variables[i], resolveType(arguments[i], inheritedBindings));
             }
+        } else if (type instanceof Class) {
+            rawClass = (Class<?>) type;
+        } else {
+            return null;
         }
 
-        // 若未找到，尝试递归查找父接口（处理多层继承）
-        Class<?>[] interfaces = daoInterface.getInterfaces();
-        for (Class<?> inter : interfaces) {
-            Class<T> result = getEntityClass(inter);
+        if (rawClass == BaseDao.class) {
+            Type entityType = resolveType(rawClass.getTypeParameters()[0], bindings);
+            if (entityType instanceof ParameterizedType) {
+                entityType = ((ParameterizedType) entityType).getRawType();
+            }
+            return entityType instanceof Class ? (Class<?>) entityType : null;
+        }
+        for (Type parent : rawClass.getGenericInterfaces()) {
+            Class<?> result = resolveEntityClass(parent, bindings);
             if (result != null) {
                 return result;
             }
         }
+        Type superclass = rawClass.getGenericSuperclass();
+        return superclass == null ? null : resolveEntityClass(superclass, bindings);
+    }
 
-        throw new IllegalArgumentException("无法从DAO接口中解析出实体类型T");
+    private static Type resolveType(Type type, Map<TypeVariable<?>, Type> bindings) {
+        while (type instanceof TypeVariable) {
+            Type resolved = bindings.get(type);
+            if (resolved == null || resolved.equals(type)) {
+                break;
+            }
+            type = resolved;
+        }
+        return type;
     }
 
 }

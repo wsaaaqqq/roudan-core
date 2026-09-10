@@ -1,6 +1,8 @@
 package test.orm.util;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xht.xdb.XdbConfig;
 import org.xht.xdb.enums.OrmType;
@@ -11,6 +13,18 @@ import test.orm.po.PoJimmer;
 import test.orm.po.PoJimmerFactory;
 
 public class OrmAnnoUtilTest {
+    private OrmType previousOrmType;
+
+    @BeforeEach
+    public void saveOrmType() {
+        previousOrmType = XdbConfig.getOrmType();
+    }
+
+    @AfterEach
+    public void restoreOrmType() {
+        XdbConfig.setOrmType(previousOrmType);
+    }
+
     @Test
     public void getTableName() {
 //        XdbConfig.setOrmType(OrmType.JPA);

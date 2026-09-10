@@ -3,6 +3,7 @@ package org.xht.xdb.orm.cascade;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.*;
 import java.util.function.Consumer;
@@ -11,7 +12,8 @@ import java.util.function.Function;
 public class CascadeQueryService {
 
     // 线程本地变量，用于递归时检测循环引用，避免栈溢出
-    private final ThreadLocal<Set<Object>> processedObjects = ThreadLocal.withInitial(HashSet::new);
+    private final ThreadLocal<Set<Object>> processedObjects =
+            ThreadLocal.withInitial(() -> Collections.newSetFromMap(new IdentityHashMap<>()));
 
     // 不需要级联处理的基础类型白名单
     private static final Set<Class<?>> BASIC_TYPES = new HashSet<>(Arrays.asList(
@@ -121,7 +123,7 @@ public class CascadeQueryService {
                                                    ">");
             }
             C result = function.apply(from);
-            result.forEach(this::cascadeFill);
+            cascadeFill(result);
             return result;
         } finally {
             processedObjects.remove();
@@ -131,10 +133,14 @@ public class CascadeQueryService {
     // ========== 级联填充逻辑 ==========
     @SuppressWarnings("unchecked")
     private <T> T cascadeFill(T obj) {
-        if (obj == null || BASIC_TYPES.contains(obj.getClass()) || processedObjects.get().contains(obj)) {
+        if (obj == null || isBasicType(obj.getClass()) || processedObjects.get().contains(obj)) {
             return obj;
         }
         processedObjects.get().add(obj);
+        if (obj instanceof Collection<?>) {
+            ((Collection<?>) obj).forEach(this::cascadeFill);
+            return obj;
+        }
 
         Field[] fields = obj.getClass().getDeclaredFields();
         for (Field field : fields) {
@@ -142,8 +148,8 @@ public class CascadeQueryService {
                     java.lang.reflect.Modifier.isFinal(field.getModifiers())) {
                 continue;
             }
-            field.setAccessible(true);
             try {
+                field.setAccessible(true);
                 Object fieldValue = field.get(obj);
                 if (fieldValue == null)
                     continue;
@@ -166,8 +172,7 @@ public class CascadeQueryService {
                     Collection<?> fieldCollection = (Collection<?>) fieldValue;
                     if (fieldCollection.isEmpty())
                         continue;
-                    ParameterizedType genericType = (ParameterizedType) field.getGenericType();
-                    Class<?> elementType = (Class<?>) genericType.getActualTypeArguments()[0];
+                    Class<?> elementType = collectionElementType(field);
                     Class<? extends Collection> collectionClass = (Class<? extends Collection>) fieldType;
 
                     // 优先匹配注册的集合转换器
@@ -178,22 +183,23 @@ public class CascadeQueryService {
                     if (collectionConverter != null) {
                         Collection<?> convertedCollection = collectionConverter.apply(fieldValue);
                         field.set(obj, convertedCollection);
-                        convertedCollection.forEach(this::cascadeFill);
+                        cascadeFill(convertedCollection);
                         continue;
                     }
 
                     // 没有集合转换器则尝试用单元素转换器批量转换
-                    Object firstItem = fieldCollection.iterator().next();
+                    Object firstItem = fieldCollection.stream().filter(Objects::nonNull).findFirst().orElse(null);
                     Function<Object, Object> elementConverter =
-                            (Function<Object, Object>) key2Map.get(firstItem.getClass(), elementType);
+                            firstItem == null ? null : (Function<Object, Object>) key2Map.get(firstItem.getClass(), elementType);
                     if (elementConverter != null) {
                         Collection<Object> convertedCollection = createEmptyCollection(collectionClass);
                         for (Object item : fieldCollection) {
-                            Object convertedItem = elementConverter.apply(item);
+                            Object convertedItem = item == null ? null : elementConverter.apply(item);
                             convertedCollection.add(convertedItem);
                             cascadeFill(convertedItem);
                         }
                         field.set(obj, convertedCollection);
+                        continue;
                     }
                 }
 
@@ -267,6 +273,33 @@ public class CascadeQueryService {
 
     // ========== 工具方法 ==========
 
+    private static boolean isBasicType(Class<?> type) {
+        return BASIC_TYPES.contains(type) || type.isEnum() || Enum.class.isAssignableFrom(type) ||
+                Number.class.isAssignableFrom(type) || Date.class.isAssignableFrom(type) ||
+                Calendar.class.isAssignableFrom(type) || UUID.class == type || Class.class == type ||
+                java.time.temporal.TemporalAccessor.class.isAssignableFrom(type) ||
+                java.time.temporal.TemporalAmount.class.isAssignableFrom(type) ||
+                java.time.ZoneId.class.isAssignableFrom(type);
+    }
+
+    private static Class<?> collectionElementType(Field field) {
+        Type type = field.getGenericType();
+        if (type instanceof ParameterizedType) {
+            Type[] arguments = ((ParameterizedType) type).getActualTypeArguments();
+            if (arguments.length == 1) {
+                Type elementType = arguments[0];
+                if (elementType instanceof ParameterizedType) {
+                    elementType = ((ParameterizedType) elementType).getRawType();
+                }
+                if (elementType instanceof Class<?>) {
+                    return (Class<?>) elementType;
+                }
+            }
+        }
+        throw new IllegalArgumentException("Cannot resolve collection element type for " +
+                field.getDeclaringClass().getName() + "." + field.getName() + ": " + type.getTypeName());
+    }
+
     /**
      * 创建空集合实例，优先使用目标类型的无参构造，失败则 fallback 到默认实现
      */
@@ -277,11 +310,13 @@ public class CascadeQueryService {
             return constructor.newInstance();
         } catch (Exception e) {
             // 接口/不可变类型创建失败时走fallback逻辑
-            if (Set.class.isAssignableFrom(collectionClass)) {
+            if (collectionClass.isAssignableFrom(TreeSet.class) && SortedSet.class.isAssignableFrom(collectionClass)) {
+                return (C) new TreeSet<>();
+            } else if (collectionClass.isAssignableFrom(HashSet.class) && Set.class.isAssignableFrom(collectionClass)) {
                 return (C) new HashSet<>();
-            } else if (List.class.isAssignableFrom(collectionClass)) {
+            } else if (collectionClass.isAssignableFrom(ArrayList.class)) {
                 return (C) new ArrayList<>();
-            } else if (Queue.class.isAssignableFrom(collectionClass)) {
+            } else if (collectionClass.isAssignableFrom(LinkedList.class)) {
                 return (C) new LinkedList<>();
             }
             throw new RuntimeException("Unsupported collection type: " + collectionClass.getName(), e);

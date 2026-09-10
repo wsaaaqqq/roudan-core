@@ -7,7 +7,7 @@ import org.xht.xdb.enums.OrmType;
 import org.xht.xdb.orm.mapping.*;
 import org.xht.xdb.util.SerializableFunction;
 
-import java.lang.reflect.AnnotatedType;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -42,9 +42,22 @@ public class OrmAnnoUtil {
             beanClass = (Class<?>) t;
         } else {
             if (beanClass.isAnonymousClass()) {
-                AnnotatedType annotatedInterface = beanClass.getAnnotatedInterfaces()[0];
-                Type type = annotatedInterface.getType();
-                beanClass = (Class<?>) type;
+                Class<?> superclass = beanClass.getSuperclass();
+                if (superclass != null && superclass != Object.class) {
+                    beanClass = superclass;
+                } else {
+                    Type[] interfaces = beanClass.getGenericInterfaces();
+                    if (interfaces.length > 0) {
+                        Type type = interfaces[0];
+                        if (type instanceof ParameterizedType) {
+                            type = ((ParameterizedType) type).getRawType();
+                        }
+                        if (!(type instanceof Class<?>)) {
+                            throw new IllegalArgumentException("Cannot resolve anonymous interface type: " + type);
+                        }
+                        beanClass = (Class<?>) type;
+                    }
+                }
             }
         }
         return beanClass;

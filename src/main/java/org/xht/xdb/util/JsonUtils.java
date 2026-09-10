@@ -8,13 +8,16 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.sql.Time;
+import java.text.ParsePosition;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import org.xht.xdb.function.impl.SetBooleanField;
 
 public class JsonUtils {
 
@@ -84,10 +87,8 @@ public class JsonUtils {
                 for (int i = 0; i < list.size(); i++) Array.set(arr, i, list.get(i));
                 return arr;
             }
-            case SET:
-                return new LinkedHashSet<Object>(fromList(text, meta.elemOrComp));
-            case LIST:
-                return fromList(text, meta.elemOrComp);
+            case COLLECTION:
+                return fromCollection(text, meta);
             case BEAN:
             default:
                 return fromBean(text, meta.target);
@@ -96,7 +97,7 @@ public class JsonUtils {
 
     /** 同一Field的分支判断只做一次：Kind + 预解析好的目标/元素类型 */
     private enum Kind {
-        STRING_OR_OBJECT, SIMPLE, ENUM, ARRAY, LIST, SET, BEAN
+        STRING_OR_OBJECT, SIMPLE, ENUM, ARRAY, COLLECTION, BEAN
     }
 
     private static final class FieldMeta {
@@ -127,8 +128,7 @@ public class JsonUtils {
             case ENUM:
                 return ((Enum<?>) value).name();
             case ARRAY:
-            case LIST:
-            case SET:
+            case COLLECTION:
             case BEAN:
             default:
                 return toJson(value);
@@ -189,10 +189,7 @@ public class JsonUtils {
                 Type arg = ((ParameterizedType) generic).getActualTypeArguments()[0];
                 if (arg instanceof Class) elem = (Class<?>) arg;
             }
-            if (Set.class.isAssignableFrom(type)) {
-                return new FieldMeta(Kind.SET, type, elem);
-            }
-            return new FieldMeta(Kind.LIST, type, elem); // List/Collection/其他Collection统一给List
+            return new FieldMeta(Kind.COLLECTION, type, elem);
         }
         // Map/Bean：走json库
         return new FieldMeta(Kind.BEAN, type, null);
@@ -214,6 +211,41 @@ public class JsonUtils {
             }
         }
         throw new RuntimeException("无hutool/jackson可做反序列化");
+    }
+
+    private static Collection<?> fromCollection(String json, FieldMeta meta) {
+        Collection<Object> result = newCollection(meta.target);
+        try {
+            result.addAll(fromList(json, meta.elemOrComp));
+            return result;
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException("无法填充集合类型: " + meta.target.getName(), e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Collection<Object> newCollection(Class<?> target) {
+        Class<?> implementation = target;
+        if (target.isInterface() || Modifier.isAbstract(target.getModifiers())) {
+            // 仅采用能赋给声明类型的默认实现，自定义子接口不可退化为父类型。
+            Class<?>[] candidates = {ArrayList.class, LinkedHashSet.class, TreeSet.class, LinkedList.class};
+            implementation = null;
+            for (Class<?> candidate : candidates) {
+                if (target.isAssignableFrom(candidate)) {
+                    implementation = candidate;
+                    break;
+                }
+            }
+        }
+        if (implementation == null) {
+            throw new IllegalArgumentException("无法构造集合类型: " + target.getName());
+        }
+        try {
+            return (Collection<Object>) implementation.getDeclaredConstructor().newInstance();
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            throw new IllegalArgumentException("无法构造集合类型: " + target.getName()
+                    + "，需要可访问的无参构造器", e);
+        }
     }
 
     public static String toJson(Object value) {
@@ -255,19 +287,16 @@ public class JsonUtils {
     }
 
     private static boolean isSimple(Class<?> c) {
-        return c.isPrimitive()
+        return (c.isPrimitive() && c != void.class)
                 || c == Boolean.class
                 || c == Character.class
-                || Timestamp.class.isAssignableFrom(c)
-                || java.util.Date.class.isAssignableFrom(c)
-                || Date.class.isAssignableFrom(c)
-                || LocalDateTime.class.isAssignableFrom(c)
-                || LocalDate.class.isAssignableFrom(c)
-                || LocalTime.class.isAssignableFrom(c)
-                || Number.class.isAssignableFrom(c)
-                || BigDecimal.class.isAssignableFrom(c)
-                || BigInteger.class.isAssignableFrom(c)
-                || CharSequence.class.isAssignableFrom(c);
+                || c == Byte.class || c == Short.class || c == Integer.class || c == Long.class
+                || c == Float.class || c == Double.class
+                || c == Timestamp.class || c == java.util.Date.class || c == Date.class || c == Time.class
+                || c == LocalDateTime.class || c == LocalDate.class || c == LocalTime.class
+                || c == BigDecimal.class || c == BigInteger.class
+                || c == AtomicInteger.class || c == AtomicLong.class
+                || c == StringBuilder.class || c == StringBuffer.class;
     }
 
     private static Object parseSimple(String v, Class<?> c) {
@@ -277,11 +306,32 @@ public class JsonUtils {
         if (c == float.class || c == Float.class) return Float.valueOf(v);
         if (c == short.class || c == Short.class) return Short.valueOf(v);
         if (c == byte.class || c == Byte.class) return Byte.valueOf(v);
-        if (c == boolean.class || c == Boolean.class) return Boolean.valueOf(v);
+        if (c == boolean.class || c == Boolean.class) return SetBooleanField.parse(v);
         if (c == char.class || c == Character.class) return v.isEmpty() ? '\0' : v.charAt(0);
         if (c == java.math.BigDecimal.class) return new java.math.BigDecimal(v);
         if (c == java.math.BigInteger.class) return new java.math.BigInteger(v);
-        return v;
+        if (c == java.util.Date.class) {
+            // 保持已有Date.toString()存储格式；解析器局部创建以保证线程安全。
+            SimpleDateFormat format = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.ENGLISH);
+            format.setLenient(false);
+            ParsePosition position = new ParsePosition(0);
+            java.util.Date date = format.parse(v, position);
+            if (date == null || position.getIndex() != v.length()) {
+                throw new IllegalArgumentException("无效的Date文本，期望格式EEE MMM dd HH:mm:ss zzz yyyy: " + v);
+            }
+            return date;
+        }
+        if (c == Date.class) return Date.valueOf(v);
+        if (c == Time.class) return Time.valueOf(v);
+        if (c == Timestamp.class) return Timestamp.valueOf(v);
+        if (c == LocalDate.class) return LocalDate.parse(v);
+        if (c == LocalTime.class) return LocalTime.parse(v);
+        if (c == LocalDateTime.class) return LocalDateTime.parse(v);
+        if (c == StringBuilder.class) return new StringBuilder(v);
+        if (c == StringBuffer.class) return new StringBuffer(v);
+        if (c == AtomicInteger.class) return new AtomicInteger(Integer.parseInt(v));
+        if (c == AtomicLong.class) return new AtomicLong(Long.parseLong(v));
+        throw new IllegalArgumentException("不支持的简单类型: " + c.getName());
     }
 
     private static Object defaultForPrimitive(Class<?> c) {

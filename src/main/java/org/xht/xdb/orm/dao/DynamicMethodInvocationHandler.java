@@ -102,11 +102,11 @@ public class DynamicMethodInvocationHandler<T> implements InvocationHandler {
                 break;
             case "count":
                 long count = Xdb.sqlTool(sqlTool).executeCount();
-                if (returnType.isAssignableFrom(Integer.class) || returnType.isAssignableFrom(int.class)) {
+                if (returnType == Integer.class || returnType == int.class) {
                     data = (int) count;
-                } else if (returnType.isAssignableFrom(Short.class) || returnType.isAssignableFrom(short.class)) {
+                } else if (returnType == Short.class || returnType == short.class) {
                     data = (short) count;
-                } else if (returnType.isAssignableFrom(BigInteger.class)) {
+                } else if (returnType == BigInteger.class) {
                     data = BigInteger.valueOf(count);
                 } else {
                     data = count;
@@ -124,7 +124,7 @@ public class DynamicMethodInvocationHandler<T> implements InvocationHandler {
                 break;
         }
         // returnType 是 optional
-        if (returnType.isAssignableFrom(Optional.class)) {
+        if (returnType == Optional.class) {
             return Optional.ofNullable(data);
         }
         return data;
