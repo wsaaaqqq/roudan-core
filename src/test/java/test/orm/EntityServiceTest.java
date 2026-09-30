@@ -318,166 +318,28 @@ public class EntityServiceTest {
     }
 
     @Test
-    public void testSave() {
-    }
-
-    @Test
-    public void update() {
-    }
-
-    @Test
-    public void testUpdate() {
-    }
-
-    @Test
-    public void testUpdate1() {
-    }
-
-    @Test
-    public void testUpdate2() {
-    }
-
-    @Test
-    public void testDelete() {
-    }
-
-    @Test
-    public void testDelete1() {
-    }
-
-    @Test
-    public void deleteById() {
-    }
-
-    @Test
-    public void testDeleteById() {
-    }
-
-    @Test
-    public void existId() {
-    }
-
-    @Test
-    public void testExist() {
-    }
-
-    @Test
-    public void notExistId() {
-    }
-
-    @Test
-    public void notExist() {
-    }
-
-    @Test
-    public void getByIds() {
-    }
-
-    @Test
-    public void testGetByIds() {
-    }
-
-    @Test
-    public void testGetByIds1() {
-    }
-
-    @Test
-    public void testGetByIds2() {
-    }
-
-    @Test
-    public void testGetByIds3() {
-    }
-
-    @Test
-    public void testGetByIds4() {
-    }
-
-    @Test
     public void infos() {
-    }
+        String firstId = "infos_existing_1";
+        String missingId = "infos_missing";
+        String secondId = "infos_existing_2";
+        dao.saveOrUpdate(Arrays.asList(
+                new PoJPA().setId(firstId).setName("first"),
+                new PoJPA().setId(secondId).setName("second")
+        ), true);
 
-    @Test
-    public void testInfos() {
-    }
+        try {
+            // Regression: the input has 3 IDs but only 2 rows exist. The old implementation
+            // indexed the query result by input position and failed on index 2 (size 2).
+            java.util.Map<String, PoJPA> result = dao.infos(
+                    Arrays.asList(firstId, missingId, secondId), 100
+            );
 
-    @Test
-    public void getByIdOpt() {
-    }
-
-    @Test
-    public void getById() {
-    }
-
-    @Test
-    public void testGetById() {
-    }
-
-    @Test
-    public void testIds() {
-    }
-
-    @Test
-    public void testIds1() {
-    }
-
-    @Test
-    public void testIds2() {
-    }
-
-    @Test
-    public void asListAll() {
-    }
-
-    @Test
-    public void list() {
-    }
-
-    @Test
-    public void testList() {
-    }
-
-    @Test
-    public void sql() {
-    }
-
-    @Test
-    public void sqlPage() {
-    }
-
-    @Test
-    public void testList1() {
-    }
-
-    @Test
-    public void testList2() {
-    }
-
-    @Test
-    public void page() {
-    }
-
-    @Test
-    public void testPage() {
-    }
-
-    @Test
-    public void testPage1() {
-    }
-
-    @Test
-    public void testPage2() {
-    }
-
-    @Test
-    public void count() {
-    }
-
-    @Test
-    public void testCount() {
-    }
-
-    @Test
-    public void testCount1() {
+            Assertions.assertEquals(2, result.size());
+            Assertions.assertEquals(firstId, result.get(firstId).getId());
+            Assertions.assertEquals(secondId, result.get(secondId).getId());
+            Assertions.assertFalse(result.containsKey(missingId));
+        } finally {
+            dao.deleteById(Arrays.asList(firstId, secondId), 100);
+        }
     }
 }

@@ -1,5 +1,6 @@
 package org.xht.xdb.orm;
 
+import cn.hutool.core.util.ReflectUtil;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -24,6 +25,7 @@ import java.time.LocalTime;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Getter
@@ -408,18 +410,22 @@ public class EntityServiceImp<T> implements EntityService<T> {
 
     @Override
     public @NonNull <ID> Map<ID, T> infos(List<ID> ids, int batchSize) {
+        if (ids == null || ids.isEmpty())
+            return new LinkedHashMap<>();
         List<T> pos = getByIds(ids, batchSize);
-        @NonNull Map<ID, T> map = new HashMap<>(pos.size());
-        for (int i = 0, len = ids.size(); i < len; i++) {
-            T value;
-            ID id = ids.get(i);
-            try {
-                value = pos.get(i);
-            } catch (Exception e) {
-                log.error("getByIds error: id[{}]", id);
-                throw e;
+        String idFieldName = OrmAnnoUtil.getIdFieldNameByBeanClass(getBeanClass());
+        Function<T, ?> idExtractor = entity -> ReflectUtil.getFieldValue(entity, idFieldName);
+        Set<ID> idSet = new HashSet<>(ids);
+        Map<ID, T> map = new HashMap<>(pos.size());
+        for (T entity : pos) {
+            if (idSet.isEmpty()) {
+                break;
             }
-            map.put(id, value);
+            ID id = (ID) idExtractor.apply(entity);
+            if (idSet.contains(id)) {
+                map.put(id, entity);
+                idSet.remove(id);
+            }
         }
         return map;
     }
