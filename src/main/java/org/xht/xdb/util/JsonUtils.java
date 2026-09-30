@@ -2,22 +2,31 @@ package org.xht.xdb.util;
 
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.cache.impl.LRUCache;
+import org.xht.xdb.function.impl.SetBooleanField;
 
 import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.URL;
+import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.Date;
-import java.sql.Timestamp;
+import java.sql.Ref;
+import java.sql.RowId;
+import java.sql.SQLXML;
 import java.sql.Time;
+import java.sql.Timestamp;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import org.xht.xdb.function.impl.SetBooleanField;
+import java.util.function.Function;
 
 public class JsonUtils {
 
@@ -63,6 +72,46 @@ public class JsonUtils {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /** 保留 JDBC 原生值，只对复杂对象做 JSON 转换。 */
+    public static Object toJsonIfCompatible(Object fieldValue) {
+        if (fieldValue == null || isJdbcValueType(fieldValue.getClass())) {
+            return fieldValue;
+        }
+        // instanceof 同样覆盖带常量专属类体的枚举。
+        if (fieldValue instanceof Enum<?>) {
+            return ((Enum<?>) fieldValue).name();
+        }
+        return toJson(fieldValue);
+    }
+
+    /** 生成数据库绑定值；Object 等宽泛声明按实际值类型处理。 */
+    public static Object toJsonIfCompatible(Object fieldValue, Field field) {
+        if (fieldValue == null) {
+            return null;
+        }
+        return jdbcValueConverter(field).apply(fieldValue);
+    }
+
+    /** 批量 Bean 转换时按字段预计算，不逐行访问读取侧的全局 LRU。 */
+    static Function<Object, Object> jdbcValueConverter(Field field) {
+        if (isJdbcValueType(field.getType())) {
+            return Function.identity();
+        }
+        return JsonUtils::toJsonIfCompatible;
+    }
+
+    private static boolean isJdbcValueType(Class<?> type) {
+        return type == String.class || isSimple(type) || type == byte[].class
+                || java.util.Date.class.isAssignableFrom(type)
+                || Blob.class.isAssignableFrom(type) || Clob.class.isAssignableFrom(type)
+                // java.sql.Array 是 JDBC ARRAY 接口（驱动实现），与 Java 数组 T[] 无关：
+                // 复杂对象的 Java 数组（Foo[]/Object[]）不匹配此判断，仍走 JSON 序列化。
+                || java.sql.Array.class.isAssignableFrom(type) || Ref.class.isAssignableFrom(type)
+                || RowId.class.isAssignableFrom(type) || SQLXML.class.isAssignableFrom(type)
+                || type == OffsetDateTime.class || type == OffsetTime.class
+                || type == UUID.class || URL.class.isAssignableFrom(type);
     }
 
     public static Object toBeanCompatible(String text, Field field) {
@@ -249,20 +298,32 @@ public class JsonUtils {
     }
 
     public static String toJson(Object value) {
+        if (value == null) return null;
+        Throwable failure = null;
         if (HUTOOL_TO_JSONSTR != null) {
             try {
                 return (String) HUTOOL_TO_JSONSTR.invoke(null, value);
-            } catch (Exception ignore) {
+            } catch (Exception e) {
+                failure = invocationCause(e);
             }
         }
         if (JACKSON_MAPPER != null && JACKSON_WRITE_STR != null) {
             try {
                 return (String) JACKSON_WRITE_STR.invoke(JACKSON_MAPPER, value);
             } catch (Exception e) {
-                throw new RuntimeException(e.getCause());
+                Throwable cause = invocationCause(e);
+                if (failure != null && failure != cause) cause.addSuppressed(failure);
+                throw new IllegalArgumentException("JSON序列化失败: " + value.getClass().getName(), cause);
             }
         }
-        throw new RuntimeException("无hutool/jackson可做序列化");
+        if (failure != null) {
+            throw new IllegalArgumentException("JSON序列化失败: " + value.getClass().getName(), failure);
+        }
+        throw new IllegalStateException("JSON序列化需要运行时依赖 hutool-json 或 jackson-databind");
+    }
+
+    private static Throwable invocationCause(Exception e) {
+        return e instanceof InvocationTargetException && e.getCause() != null ? e.getCause() : e;
     }
 
     @SuppressWarnings("unchecked")

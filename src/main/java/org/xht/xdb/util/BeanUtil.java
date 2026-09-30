@@ -3,7 +3,6 @@ package org.xht.xdb.util;
 import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.util.ReflectUtil;
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import org.xht.xdb.orm.util.OrmAnnoUtil;
 import org.xht.xdb.vo.Row;
 
@@ -14,7 +13,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
-@Slf4j
 public class BeanUtil {
 
     public static <T> void copyProperties(T from, T to, boolean ignoreNullFields) {
@@ -26,251 +24,112 @@ public class BeanUtil {
     }
 
     public static MapUtil<Object> toMapUtil(Object bean) {
-        MapUtil<Object> map = new MapUtil<>();
-        try {
-            Field[] fields = ReflectUtil.getFields(bean.getClass());
-            for (Field field : fields) {
-                try {
-                    field.setAccessible(true);
-                    addField(bean, field, map);
-                } catch (Exception ignored) {
-                }
-            }
-        } catch (Exception e) {
-            log.error("", e);
-        }
-        return map;
-    }
-
-    private static void addField(Object bean, Field field, Map<String, Object> map) throws IllegalAccessException {
-        if (OrmAnnoUtil.isNotIgnoreCol(bean, field)) {
-            String colName = OrmAnnoUtil.getColName(bean, field.getName());
-            map.put(colName, field.get(bean));
-        }
-    }
-
-    private static void addField(Object bean, Field field, MapUtil<Object> map) throws IllegalAccessException {
-        if (OrmAnnoUtil.isNotIgnoreCol(bean, field)) {
-            String colName = OrmAnnoUtil.getColName(bean, field.getName());
-            map.add(colName, field.get(bean));
-        }
-    }
-
-    private static void addField(Object bean, Field field, Row map) throws IllegalAccessException {
-        if (OrmAnnoUtil.isNotIgnoreCol(bean, field)) {
-            String colName = OrmAnnoUtil.getColName(bean, field.getName());
-            map.put(colName, field.get(bean));
-        }
+        return MapUtil.clone(toRow(bean));
     }
 
     public static Map<String, Object> toMap(Object bean) {
-        Map<String, Object> map = new HashMap<>();
-        try {
-            Field[] fields = ReflectUtil.getFields(bean.getClass());
-            for (Field field : fields) {
-                try {
-                    field.setAccessible(true);
-                    addField(bean, field, map);
-                } catch (Exception ignored) {
-                }
-            }
-        } catch (Exception e) {
-            log.error("", e);
-        }
-        return map;
+        return new HashMap<>(toRow(bean));
     }
 
     public static Row toRow(Object bean) {
-        Row map = new Row();
-        try {
-            Field[] fields = ReflectUtil.getFields(bean.getClass());
-            for (Field field : fields) {
-                try {
-                    field.setAccessible(true);
-                    addField(bean, field, map);
-                } catch (Exception ignored) {
-                }
-            }
-        } catch (Exception e) {
-            log.error("", e);
-        }
-        return map;
+        return bean == null ? new Row() : toRow(bean, columnsFor(bean));
     }
 
     public static <T> Map<T, Row> toMapBeanRow(Collection<T> beans) {
         Map<T, Row> mapBeanRow = new HashMap<>();
-        if (beans == null || beans.isEmpty())
-            return mapBeanRow;
-        try {
-            Object bean0 = beans.stream().findFirst().get();
-            Field[] fields = ReflectUtil.getFields(bean0.getClass());
-            for (Field field : fields) {
-                field.setAccessible(true);
-            }
-            Map<Field, Boolean> notIgnoreColMap = new HashMap<>();
-            Map<Field, String> colNameMap = new HashMap<>();
-            for (T bean : beans) {
-                Row map = new Row();
-                for (Field field : fields) {
-                    Boolean notIgnoreCol = notIgnoreColMap.get(field);
-                    if (notIgnoreCol == null) {
-                        notIgnoreCol = OrmAnnoUtil.isNotIgnoreCol(bean, field);
-                        notIgnoreColMap.put(field, notIgnoreCol);
-                    }
-                    if (notIgnoreCol) {
-                        String colName = colNameMap.get(field);
-                        if (colName == null) {
-                            colName = OrmAnnoUtil.getColName(bean, field.getName());
-                            colNameMap.put(field, colName);
-                        }
-                        map.put(colName, field.get(bean));
-                    }
-                }
-                mapBeanRow.put(bean, map);
-            }
-        } catch (Exception e) {
-            log.error("", e);
-        }
+        forEachConverted(beans, mapBeanRow::put);
         return mapBeanRow;
     }
 
     public static <T> List<Row> toRows(Collection<T> beans, Function<Row, Boolean> test, BiConsumer<T, Row> success,
                                        BiConsumer<T, Row> fail
     ) {
-        List<Row> rows = new ArrayList<>();
-        if (beans == null || beans.isEmpty()) {
-            return rows;
-        }
-        try {
-            Object bean0 = beans.stream().findFirst().get();
-            Field[] fields = ReflectUtil.getFields(bean0.getClass());
-            for (Field field : fields) {
-                field.setAccessible(true);
+        // 全批转换成功后再回调，避免向调用方暴露失败批次的前缀。
+        List<Row> rows = toRows(beans);
+        if (rows.isEmpty()) return rows;
+        Iterator<T> iterator = beans.iterator();
+        for (Row row : rows) {
+            T bean = iterator.next();
+            if (test.apply(row)) {
+                success.accept(bean, row);
+            } else {
+                fail.accept(bean, row);
             }
-            Map<Field, Boolean> notIgnoreColMap = new HashMap<>();
-            Map<Field, String> colNameMap = new HashMap<>();
-            for (T bean : beans) {
-                Row row = new Row();
-                for (Field field : fields) {
-                    Boolean notIgnoreCol = notIgnoreColMap.get(field);
-                    if (notIgnoreCol == null) {
-                        notIgnoreCol = OrmAnnoUtil.isNotIgnoreCol(bean, field);
-                        notIgnoreColMap.put(field, notIgnoreCol);
-                    }
-                    if (notIgnoreCol) {
-                        String colName = colNameMap.get(field);
-                        if (colName == null) {
-                            colName = OrmAnnoUtil.getColName(bean, field.getName());
-                            colNameMap.put(field, colName);
-                        }
-                        row.put(colName, field.get(bean));
-                    }
-                }
-                rows.add(row);
-                if (test.apply(row)) {
-                    success.accept(bean, row);
-                } else {
-                    fail.accept(bean, row);
-                }
-            }
-        } catch (Exception e) {
-            log.error("", e);
         }
         return rows;
     }
 
     public static <T> List<Row> toRows(Collection<T> beans) {
         List<Row> rows = new ArrayList<>();
-        if (beans == null || beans.isEmpty()) {
-            return rows;
-        }
-        try {
-            Object bean0 = beans.stream().findFirst().get();
-            Field[] fields = ReflectUtil.getFields(bean0.getClass());
-            for (Field field : fields) {
-                field.setAccessible(true);
-            }
-            Map<Field, Boolean> notIgnoreColMap = new HashMap<>();
-            Map<Field, String> colNameMap = new HashMap<>();
-            Map<Field, Boolean> colTypeIsJson = new HashMap<>();
-            for (T bean : beans) {
-                Row row = new Row();
-                for (Field field : fields) {
-                    Boolean notIgnoreCol = notIgnoreColMap.get(field);
-                    if (notIgnoreCol == null) {
-                        notIgnoreCol = OrmAnnoUtil.isNotIgnoreCol(bean, field);
-                        notIgnoreColMap.put(field, notIgnoreCol);
-                    }
-                    if (notIgnoreCol) {
-                        String colName = colNameMap.get(field);
-                        if (colName == null) {
-                            colName = OrmAnnoUtil.getColName(bean, field.getName());
-                            colNameMap.put(field, colName);
-                        }
-                        Boolean isJson = colTypeIsJson.get(field);
-                        if (isJson == null) {
-                            isJson = JsonUtils.isCompatible(field);
-                            colTypeIsJson.put(field, isJson);
-                        }
-                        Object value = field.get(bean);
-                        if (isJson) {
-                            row.put(colName, JsonUtils.toJson(value));
-                            row.put(colName, JsonUtils.toJson(value));
-                        } else {
-                            row.put(colName, value);
-                        }
-                    }
-                }
-                rows.add(row);
-            }
-        } catch (Exception e) {
-            log.error("", e);
-        }
+        forEachConverted(beans, (bean, row) -> rows.add(row));
         return rows;
     }
 
     public static List<MapUtil<Object>> toMapUtils(Collection<Object> beans) {
         List<MapUtil<Object>> maps = new ArrayList<>();
-        if (beans != null && !beans.isEmpty()) {
-            Class<?> beanClass = beans.iterator().next().getClass();
-            Field[] fields = ReflectUtil.getFields(beanClass);
-            for (Field field : fields) {
-                field.setAccessible(true);
-            }
-            for (Object bean : beans) {
-                MapUtil<Object> map = new MapUtil<>();
-                for (Field field : fields) {
-                    try {
-                        addField(bean, field, map);
-                    } catch (Exception ignored) {
-                    }
-                }
-                maps.add(map);
-            }
-        }
+        forEachConverted(beans, (bean, row) -> maps.add(MapUtil.clone(row)));
         return maps;
     }
 
     public static List<Map<String, Object>> toMaps(Collection<Object> beans) {
         List<Map<String, Object>> maps = new ArrayList<>();
-        if (beans != null && !beans.isEmpty()) {
-            Class<?> beanClass = beans.iterator().next().getClass();
-            Field[] fields = ReflectUtil.getFields(beanClass);
-            for (Field field : fields) {
+        forEachConverted(beans, (bean, row) -> maps.add(new HashMap<>(row)));
+        return maps;
+    }
+
+    private static <T> void forEachConverted(Collection<T> beans, BiConsumer<T, Row> consumer) {
+        if (beans == null || beans.isEmpty()) return;
+        // 限于本批次，既避免全局缓存锁开销，也不会跨 ormType 配置复用列映射。
+        Map<Class<?>, List<ColumnWriter>> plans = new HashMap<>();
+        for (T bean : beans) {
+            Objects.requireNonNull(bean, "批量转换的实体不能为空");
+            List<ColumnWriter> columns = plans.computeIfAbsent(bean.getClass(), type -> columnsFor(bean));
+            consumer.accept(bean, toRow(bean, columns));
+        }
+    }
+
+    private static List<ColumnWriter> columnsFor(Object bean) {
+        List<ColumnWriter> columns = new ArrayList<>();
+        for (Field field : ReflectUtil.getFields(bean.getClass())) {
+            try {
+                if (!OrmAnnoUtil.isNotIgnoreCol(bean, field)) continue;
                 field.setAccessible(true);
-            }
-            for (Object bean : beans) {
-                Map<String, Object> map = new HashMap<>();
-                for (Field field : fields) {
-                    try {
-                        addField(bean, field, map);
-                    } catch (Exception ignored) {
-                    }
-                }
-                maps.add(map);
+                columns.add(new ColumnWriter(field, OrmAnnoUtil.getColName(bean, field.getName()),
+                        JsonUtils.jdbcValueConverter(field)));
+            } catch (Exception e) {
+                throw conversionFailure(bean, field, e);
             }
         }
-        return maps;
+        return columns;
+    }
+
+    private static Row toRow(Object bean, List<ColumnWriter> columns) {
+        Row row = new Row(columns.size());
+        for (ColumnWriter column : columns) {
+            try {
+                row.put(column.name, column.converter.apply(column.field.get(bean)));
+            } catch (Exception e) {
+                throw conversionFailure(bean, column.field, e);
+            }
+        }
+        return row;
+    }
+
+    private static IllegalArgumentException conversionFailure(Object bean, Field field, Exception cause) {
+        return new IllegalArgumentException("实体字段转换失败: " + bean.getClass().getName()
+                + "." + field.getName(), cause);
+    }
+
+    private static final class ColumnWriter {
+        final Field field;
+        final String name;
+        final Function<Object, Object> converter;
+
+        ColumnWriter(Field field, String name, Function<Object, Object> converter) {
+            this.field = field;
+            this.name = name;
+            this.converter = converter;
+        }
     }
 
     @SneakyThrows

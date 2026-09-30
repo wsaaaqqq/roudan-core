@@ -1,3 +1,8 @@
+---
+name: roudan-sqlfile
+description: Use for roudan SQL-file mode - centrally managing SQL in classpath .sql files loaded via Xdb.sqlFile(), with conditional lines (--:) that auto-activate when their params are supplied, and dialect suffixes (.oracle/.mysql) for multi-database support. Trigger when using Xdb.sqlFile, XdbConfig.setSqlDir, .sql files with --: conditions, or dialect-specific SQL files with the roudan library.
+---
+
 # Roudan SQL 文件模式
 
 > 将 SQL 集中写在 classpath 下的 `.sql` 文件中，通过 `Xdb.sqlFile()` 加载执行。
@@ -36,7 +41,7 @@ List<Device> devices = Xdb.sqlFile(MyClass.class, "files/sql/device.sql")
 ### 通过相对路径
 
 ```java
-// 根目录由 XdbConfig.setSqlDir() 指定，默认 user.dir
+// 根目录由 XdbConfig.setSqlDir() 指定；未指定时默认 user.dir/files/sql/
 XdbConfig.setSqlDir("/path/to/sql");
 
 List<Device> devices = Xdb.sqlFile("device.sql")
@@ -100,6 +105,12 @@ Xdb.sqlFile(MyClass.class, "sql/device.sql")
     .debug()  // 打印最终生成的完整 SQL
     .sqlArg("type", "A")
     .executeQuery();
+
+// 条件参数同样支持 sqlArgIf（不满足条件时不绑定，该行保持注释）
+Xdb.sqlFile(MyClass.class, "sql/device.sql")
+    .sqlArgIf("status", status, status != null && !status.isEmpty())
+    .executeQuery()
+    .resultBean(Device.class);
 ```
 
 ## 适用场景

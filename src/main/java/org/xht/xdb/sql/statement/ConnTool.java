@@ -71,7 +71,7 @@ public class ConnTool {
             PreparedStatement statement = conn.prepareStatement(sql);
             int l = row.length;
             for (int k = 0; k < l; k++) {
-                statement.setObject(k + 1, row[k]);
+                NamedParameterStatement.setObject(statement, k + 1, row[k]);
             }
             int i = statement.executeUpdate();
             CommitUtil.commit(autoCommit, conn);
@@ -275,7 +275,7 @@ public class ConnTool {
             Date vDate = new Date(((java.util.Date) value).getTime());
             statement.setDate(key, vDate);
         } else {
-            statement.setObject(key, value);
+            NamedParameterStatement.setObject(statement, key, value);
         }
     }
 
@@ -307,12 +307,12 @@ public class ConnTool {
             Date vDate = new Date(((java.util.Date) value).getTime());
             statement.setDate(key, vDate);
         } else {
-            statement.setObject(key, value);
+            NamedParameterStatement.setObject(statement, key, value);
         }
     }
 
     public static void executeBatch(String sql, List<Object[]> rows, int batchSize, boolean autoCommit,
-            boolean... autoCloseConnection
+                                    boolean... autoCloseConnection
     ) {
         if (rows == null || rows.isEmpty())
             return;
@@ -326,7 +326,7 @@ public class ConnTool {
             int l = rows.get(0).length;
             for (Object[] row : rows) {
                 for (int k = 0; k < l; k++) {
-                    statement.setObject(k + 1, row[k]);
+                    NamedParameterStatement.setObject(statement, k + 1, row[k]);
                     rowLast = row;
                 }
                 statement.addBatch();
@@ -350,7 +350,7 @@ public class ConnTool {
     }
 
     public static void executeBatchRow(String sql, List<Map<String, Object>> rows, int batchSize, boolean autoCommit,
-            boolean... autoCloseConnection
+                                       boolean... autoCloseConnection
     ) {
         if (rows == null || rows.isEmpty())
             return;
@@ -365,7 +365,7 @@ public class ConnTool {
                 row.forEach((k, v) -> {
                     rowLast.set(row);
                     try {
-                        statement.setObject(k, v);
+                        NamedParameterStatement.setObject(statement,k, v);
                     } catch (SQLException e) {
                         throw new RuntimeException(e);
                     }

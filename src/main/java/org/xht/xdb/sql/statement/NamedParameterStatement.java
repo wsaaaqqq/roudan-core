@@ -41,6 +41,40 @@ public class NamedParameterStatement extends PreparedStatementWrapper {
 
     private final Map<String, List<Integer>> nameIndexMap;
 
+    public static void setObject(PreparedStatement s, int parameterIndex, Object value, int targetSqlType, int scaleOrLength) throws SQLException {
+        if (value == null) {
+            s.setNull(parameterIndex, targetSqlType);
+        } else {
+            s.setObject(parameterIndex, value, targetSqlType, scaleOrLength);
+        }
+    }
+
+    public static void setObject(PreparedStatement s, int parameterIndex, Object value, int targetSqlType) throws SQLException {
+        if (value == null) {
+            s.setNull(parameterIndex, targetSqlType);
+        } else {
+            s.setObject(parameterIndex, value, targetSqlType);
+        }
+    }
+
+    public static void setObject(PreparedStatement s, int parameterIndex, Object value)
+            throws SQLException {
+        if (value == null) {
+            s.setNull(parameterIndex, Types.NULL);
+        } else {
+            s.setObject(parameterIndex, value);
+        }
+    }
+
+    public static void setObject(NamedParameterStatement s, String key, Object value)
+            throws SQLException {
+        if (value == null) {
+            s.setNull(key, Types.NULL);
+        } else {
+            s.setObject(key, value);
+        }
+    }
+
     /**
      * Creates a NamedParameterStatement. Wraps a call to
      * c.{@link Connection#prepareStatement(java.lang.String) prepareStatement}.
@@ -59,7 +93,8 @@ public class NamedParameterStatement extends PreparedStatementWrapper {
             nameIndexCache.put(sql, nameIndexMap);
             parsedSqlCache.put(sql, parsedSql);
         }
-        ps = conn.prepareStatement(parsedSql);
+        //noinspection SqlSourceToSinkFlow
+        s = conn.prepareStatement(parsedSql);
     }
 
     /**
@@ -111,11 +146,7 @@ public class NamedParameterStatement extends PreparedStatementWrapper {
                     String name = sql.substring(i + 1, j);
                     c = '?'; // replace the parameter with a question mark
                     i += name.length(); // skip past the end if the parameter
-                    List<Integer> indexList = nameIndexMap.get(name);
-                    if (indexList == null) {
-                        indexList = new LinkedList<>();
-                        nameIndexMap.put(name, indexList);
-                    }
+                    List<Integer> indexList = nameIndexMap.computeIfAbsent(name, k -> new LinkedList<>());
                     indexList.add(index);
                     index++;
                 }
@@ -127,282 +158,283 @@ public class NamedParameterStatement extends PreparedStatementWrapper {
 
     public void setArray(String name, Array value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setArray(index, value);
+            s.setArray(index, value);
         }
     }
 
     public void setAsciiStream(String name, InputStream value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setAsciiStream(index, value);
+            s.setAsciiStream(index, value);
         }
     }
 
     public void setAsciiStream(String name, InputStream value, int length) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setAsciiStream(index, value, length);
+            s.setAsciiStream(index, value, length);
         }
     }
 
     public void setBigDecimal(String name, BigDecimal value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setBigDecimal(index, value);
+            s.setBigDecimal(index, value);
         }
     }
 
     public void setBinaryStream(String name, InputStream value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setBinaryStream(index, value);
+            s.setBinaryStream(index, value);
         }
     }
 
     public void setBinaryStream(String name, InputStream value, int length) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setBinaryStream(index, value, length);
+            s.setBinaryStream(index, value, length);
         }
     }
 
     public void setBinaryStream(String name, InputStream value, long length) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setBinaryStream(index, value, length);
+            s.setBinaryStream(index, value, length);
         }
     }
 
     public void setBlob(String name, Blob value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setBlob(index, value);
+            s.setBlob(index, value);
         }
     }
 
     public void setBlob(String name, InputStream value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setBlob(index, value);
+            s.setBlob(index, value);
         }
     }
 
     public void setBlob(String name, InputStream value, long length) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setBlob(index, value, length);
+            s.setBlob(index, value, length);
         }
     }
 
     public void setBoolean(String name, boolean value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setBoolean(index, value);
+            s.setBoolean(index, value);
         }
     }
 
     public void setByte(String name, byte value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setByte(index, value);
+            s.setByte(index, value);
         }
     }
 
     public void setBytes(String name, byte[] value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setBytes(index, value);
+            s.setBytes(index, value);
         }
     }
 
     public void setCharacterStream(String name, Reader value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setCharacterStream(index, value);
+            s.setCharacterStream(index, value);
         }
     }
 
     public void setCharacterStream(String name, Reader value, int length) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setCharacterStream(index, value, length);
+            s.setCharacterStream(index, value, length);
         }
     }
 
     public void setCharacterStream(String name, Reader value, long length) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setCharacterStream(index, value, length);
+            s.setCharacterStream(index, value, length);
         }
     }
 
     public void setClob(String name, Clob value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setClob(index, value);
+            s.setClob(index, value);
         }
     }
 
     public void setClob(String name, Reader value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setClob(index, value);
+            s.setClob(index, value);
         }
     }
 
     public void setClob(String name, Reader value, long length) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setClob(index, value, length);
+            s.setClob(index, value, length);
         }
     }
 
     public void setDate(String name, Date value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setDate(index, value);
+            s.setDate(index, value);
         }
     }
 
     public void setDate(String name, Date value, Calendar cal) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setDate(index, value, cal);
+            s.setDate(index, value, cal);
         }
     }
 
     public void setDouble(String name, double value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setDouble(index, value);
+            s.setDouble(index, value);
         }
     }
 
     public void setFloat(String name, float value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setFloat(index, value);
+            s.setFloat(index, value);
         }
     }
 
     public void setInt(String name, int value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setInt(index, value);
+            s.setInt(index, value);
         }
     }
 
     public void setLong(String name, long value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setLong(index, value);
+            s.setLong(index, value);
         }
     }
 
     public void setNCharacterStream(String name, Reader value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setNCharacterStream(index, value);
+            s.setNCharacterStream(index, value);
         }
     }
 
     public void setNCharacterStream(String name, Reader value, long length) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setNCharacterStream(index, value, length);
+            s.setNCharacterStream(index, value, length);
         }
     }
 
     public void setNClob(String name, NClob value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setNClob(index, value);
+            s.setNClob(index, value);
         }
     }
 
     public void setNClob(String name, Reader value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setNClob(index, value);
+            s.setNClob(index, value);
         }
     }
 
     public void setNClob(String name, Reader value, long length) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setNClob(index, value, length);
+            s.setNClob(index, value, length);
         }
     }
 
     public void setNString(String name, String value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setNString(index, value);
+            s.setNString(index, value);
         }
     }
 
     public void setNull(String name, int sqlType) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setNull(index, sqlType);
+            s.setNull(index, sqlType);
         }
     }
 
     public void setObject(String name, Object value) throws SQLException {
         for (Integer index : getIndexes(name)) {
             if (value instanceof java.sql.Blob) {
-                ps.setBlob(index, (java.sql.Blob) value);
+                s.setBlob(index, (java.sql.Blob) value);
             } else {
-                ps.setObject(index, value);
+                setObject(s, index, value);
             }
         }
     }
 
     public void setObject(String name, Object value, int targetSqlType) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setObject(index, value, targetSqlType);
+            setObject(s, index, value, targetSqlType);
         }
     }
 
     public void setObject(String name, Object value, int targetSqlType, int scaleOrLength) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setObject(index, value, targetSqlType, scaleOrLength);
+            setObject(s, index, value, targetSqlType, scaleOrLength);
         }
     }
 
     public void setRef(String name, Ref value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setRef(index, value);
+            s.setRef(index, value);
         }
     }
 
     public void setRowId(String name, RowId value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setRowId(index, value);
+            s.setRowId(index, value);
         }
     }
 
     public void setShort(String name, short value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setShort(index, value);
+            s.setShort(index, value);
         }
     }
 
     public void setSQLXML(String name, SQLXML value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setSQLXML(index, value);
+            s.setSQLXML(index, value);
         }
     }
 
     public void setString(String name, String value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setString(index, value);
+            s.setString(index, value);
         }
     }
 
     public void setTime(String name, Time value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setTime(index, value);
+            s.setTime(index, value);
         }
     }
 
     public void setTime(String name, Time value, Calendar cal) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setTime(index, value, cal);
+            s.setTime(index, value, cal);
         }
     }
 
     public void setTimestamp(String name, Timestamp value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setTimestamp(index, value);
+            s.setTimestamp(index, value);
         }
     }
 
     public void setTimestamp(String name, Timestamp value, Calendar cal) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setTimestamp(index, value, cal);
+            s.setTimestamp(index, value, cal);
         }
     }
 
     @SuppressWarnings("deprecation")
     public void setUnicodeStream(String name, InputStream value, int length) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setUnicodeStream(index, value, length);
+            s.setUnicodeStream(index, value, length);
         }
     }
 
     public void setURL(String name, URL value) throws SQLException {
         for (Integer index : getIndexes(name)) {
-            ps.setURL(index, value);
+            s.setURL(index, value);
         }
     }
+
 }

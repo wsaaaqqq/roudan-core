@@ -8,6 +8,7 @@ import lombok.ToString;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * T_TEST
@@ -36,7 +37,7 @@ public class PoFlex implements Serializable {
     /**
      * 编码类型
      */
-    private String type;
+    private List<PoFlex> type;
 
     /**
      * 字典排序
