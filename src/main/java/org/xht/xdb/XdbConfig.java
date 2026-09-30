@@ -38,6 +38,8 @@ public class XdbConfig {
     }};
     private boolean showSqlExecuteTime = true;
 
+    private boolean showBatchSqlErrorDetail = true;
+
     public static boolean isShowSqlExecuteTime() {
         return INSTANCE.showSqlExecuteTime;
     }
@@ -153,6 +155,15 @@ public class XdbConfig {
 
     public static XdbConfig setIgnorePackagesForDebug(Consumer<Set<String>> configIgnorePackagesForDebug) {
         configIgnorePackagesForDebug.accept(getIgnorePackagesForDebug());
+        return INSTANCE;
+    }
+
+    public static boolean isShowBatchSqlErrorDetail() {
+        return INSTANCE.showBatchSqlErrorDetail;
+    }
+
+    public static XdbConfig setShowBatchSqlErrorDetail(boolean showBatchSqlErrorDetail) {
+        INSTANCE.showBatchSqlErrorDetail = showBatchSqlErrorDetail;
         return INSTANCE;
     }
 }
